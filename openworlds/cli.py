@@ -124,6 +124,102 @@ def manifest_show(
 
 
 # ---------------------------------------------------------------------------
+# Trajectory commands
+# ---------------------------------------------------------------------------
+
+
+@trajectory_app.command("generate")
+def trajectory_generate(
+    manifest_path: Path = typer.Option(
+        Path("data/manifests/default.json"),
+        "--manifest", "-m",
+        help="Path to the manifest JSON",
+    ),
+    count: int = typer.Option(
+        0, "--count", "-n",
+        help="Max trajectories to generate (0 = all attack paths)",
+    ),
+    failure_rate: float = typer.Option(
+        0.15, "--failure-rate", "-f",
+        help="Probability of failure injection per step (0.0–1.0)",
+    ),
+    fmt: str = typer.Option(
+        "messages", "--format",
+        help="Output format: 'messages' (OpenAI) or 'chatml'",
+    ),
+    output: Path = typer.Option(
+        Path("data/datasets/trajectories.jsonl"),
+        "--output", "-o",
+        help="Output JSONL file path",
+    ),
+    seed: int = typer.Option(42, "--seed", help="Random seed"),
+    no_recon: bool = typer.Option(
+        False, "--no-recon", help="Skip reconnaissance steps",
+    ),
+) -> None:
+    """Generate training trajectories from a manifest's attack paths."""
+    from openworlds.trajectory.failure_injector import FailureInjector
+    from openworlds.trajectory.formatter import dataset_stats, export_dataset
+    from openworlds.trajectory.generator import TrajectoryGenerator
+    from openworlds.world_engine.models import Manifest
+
+    if not manifest_path.exists():
+        console.print(f"[red]Error:[/] Manifest not found: {manifest_path}")
+        console.print("Run [bold]openworlds manifest generate[/] first.")
+        raise typer.Exit(1)
+
+    manifest = Manifest.model_validate_json(manifest_path.read_text())
+
+    if not manifest.attack_paths:
+        console.print("[red]Error:[/] Manifest has no attack paths.")
+        raise typer.Exit(1)
+
+    with console.status("[bold green]Generating trajectories..."):
+        # Generate raw trajectories
+        gen = TrajectoryGenerator(manifest, seed=seed)
+        max_count = count if count > 0 else None
+        trajectories = gen.generate_all(
+            max_trajectories=max_count,
+            include_recon=not no_recon,
+        )
+        console.print(f"  ✅ Generated {len(trajectories)} raw trajectories")
+
+        # Inject failures
+        if failure_rate > 0:
+            injector = FailureInjector(failure_rate=failure_rate, seed=seed)
+            trajectories = [injector.inject(t) for t in trajectories]
+            total_failures = sum(
+                sum(1 for s in t.steps if s.is_failure) for t in trajectories
+            )
+            console.print(f"  ✅ Injected {total_failures} failure(s) across trajectories")
+
+        # Export
+        export_dataset(trajectories, output, fmt=fmt)
+        console.print(f"  ✅ Exported to {output} ({fmt} format)")
+
+    # Display stats
+    stats = dataset_stats(trajectories)
+
+    stat_table = Table(title="📊 Dataset Statistics")
+    stat_table.add_column("Metric", style="bold")
+    stat_table.add_column("Value", justify="right")
+    stat_table.add_row("Trajectories", str(stats["total_trajectories"]))
+    stat_table.add_row("Successful", str(stats["successful"]))
+    stat_table.add_row("Avg Steps", f"{stats['avg_steps']:.1f}")
+    stat_table.add_row("Min Steps", str(stats["min_steps"]))
+    stat_table.add_row("Max Steps", str(stats["max_steps"]))
+    stat_table.add_row("Avg Failures/Traj", f"{stats['avg_failures_per_trajectory']:.1f}")
+    console.print(stat_table)
+
+    strat_table = Table(title="🎮 Strategy Distribution")
+    strat_table.add_column("Strategy", style="bold cyan")
+    strat_table.add_column("Count", justify="right")
+    for strat, cnt in sorted(stats.get("strategies", {}).items()):
+        strat_table.add_row(strat, str(cnt))
+    console.print(strat_table)
+
+
+# ---------------------------------------------------------------------------
 # Shell command (interactive exploration)
 # ---------------------------------------------------------------------------
 
