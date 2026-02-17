@@ -61,7 +61,7 @@ OpenWorlds lets you:
 
 ```bash
 # Clone the repository
-git clone https://github.com/OmkarS12/Worlds-OpenSource-Clone.git
+git clone https://github.com/omkar-ukirde/Worlds-OpenSource-Clone.git
 cd Worlds-OpenSource-Clone
 
 # Install core package

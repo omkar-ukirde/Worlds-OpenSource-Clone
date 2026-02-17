@@ -6,7 +6,7 @@ Thank you for your interest in contributing! OpenWorlds is an open-source projec
 
 ```bash
 # Clone and install with dev dependencies
-git clone https://github.com/OmkarS12/Worlds-OpenSource-Clone.git
+git clone https://github.com/omkar-ukirde/Worlds-OpenSource-Clone.git
 cd Worlds-OpenSource-Clone
 pip install -e ".[dev]"
 ```

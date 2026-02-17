@@ -56,9 +56,9 @@ dev = [
 openworlds = "openworlds.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/OmkarS12/Worlds-OpenSource-Clone"
-Repository = "https://github.com/OmkarS12/Worlds-OpenSource-Clone"
-Issues = "https://github.com/OmkarS12/Worlds-OpenSource-Clone/issues"
+Homepage = "https://github.com/omkar-ukirde/Worlds-OpenSource-Clone"
+Repository = "https://github.com/omkar-ukirde/Worlds-OpenSource-Clone"
+Issues = "https://github.com/omkar-ukirde/Worlds-OpenSource-Clone/issues"
 
 [tool.setuptools.packages.find]
 include = ["openworlds*"]
