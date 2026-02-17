@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openworlds"
+version = "0.1.0"
+description = "An open-source simulation engine for agentic pentesting — generate realistic AD pentesting trajectories to fine-tune small AI models."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.11"
+authors = [
+    {name = "OpenWorlds Contributors"}
+]
+keywords = ["pentesting", "simulation", "active-directory", "llm", "fine-tuning", "security"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "pydantic>=2.0",
+    "networkx>=3.0",
+    "jinja2>=3.1",
+    "typer[all]>=0.9",
+    "rich>=13.0",
+    "openai>=1.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+training = [
+    "torch>=2.0",
+    "transformers>=4.40",
+    "peft>=0.10",
+    "trl>=0.8",
+    "datasets>=2.18",
+    "accelerate>=0.28",
+    "bitsandbytes>=0.43",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+    "mypy>=1.9",
+]
+
+[project.scripts]
+openworlds = "openworlds.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/OmkarS12/Worlds-OpenSource-Clone"
+Repository = "https://github.com/OmkarS12/Worlds-OpenSource-Clone"
+Issues = "https://github.com/OmkarS12/Worlds-OpenSource-Clone/issues"
+
+[tool.setuptools.packages.find]
+include = ["openworlds*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
