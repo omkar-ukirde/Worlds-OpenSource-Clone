@@ -16,8 +16,9 @@ OpenWorlds lets you:
 1. **Generate** realistic Active Directory networks (hosts, users, groups, ACLs, vulnerabilities) — entirely synthetic
 2. **Simulate** pentesting tools (nmap, ldapsearch, Impacket, certipy, etc.) against these networks — realistic output, zero infrastructure
 3. **Explore** networks interactively via a rich CLI shell
-4. **Create** training trajectories with reasoning traces for AI model fine-tuning *(coming soon)*
-5. **Fine-tune** any small LLM (8B params) to autonomously perform penetration tests *(coming soon)*
+4. **Create** training trajectories with `<think>` reasoning traces and failure recovery examples
+5. **Export** datasets in ChatML/Messages JSONL format, ready for fine-tuning any LLM
+6. **Fine-tune** any small LLM (8B params) to autonomously perform penetration tests *(coming soon)*
 
 > The goal: an 8B model fine-tuned on synthetic data that can achieve **full Domain Admin compromise** on real AD networks. No real infrastructure needed for training.
 
@@ -31,13 +32,13 @@ OpenWorlds lets you:
 │                                                              │
 │  ┌──────────────┐   ┌───────────────┐   ┌───────────────┐   │
 │  │ World Engine  │──▶│ Tool Simulator│──▶│  Trajectory   │   │
-│  │              │   │               │   │   Pipeline    │   │
-│  │ • Manifest   │   │ • nmap        │   │              │   │
-│  │   Generator  │   │ • ldapsearch  │   │ • Reasoning  │   │
-│  │ • Vuln       │   │ • Impacket    │   │   Traces     │   │
-│  │   Injector   │   │ • certipy     │   │ • Failure    │   │
-│  │ • Path       │   │ • smbclient   │   │   Injection  │   │
-│  │   Validator  │   │ • 10+ tools   │   │ (coming soon)│   │
+│  │   ✅ Done    │   │   ✅ Done     │   │   Pipeline    │   │
+│  │ • Manifest   │   │ • nmap        │   │   ✅ Done     │   │
+│  │   Generator  │   │ • ldapsearch  │   │              │   │
+│  │ • Vuln       │   │ • Impacket    │   │ • Reasoning  │   │
+│  │   Injector   │   │ • certipy     │   │   Traces     │   │
+│  │ • Path       │   │ • smbclient   │   │ • Failure    │   │
+│  │   Validator  │   │ • 10+ tools   │   │   Injection  │   │
 │  └──────────────┘   └───────────────┘   └──────┬───────┘   │
 │                                                 │           │
 │                                         ┌───────▼───────┐   │
@@ -203,6 +204,53 @@ Each tool handler validates credentials, checks permissions, and returns output 
 
 ---
 
+## 🎓 Generate Training Data
+
+Transform attack paths into fine-tuning datasets with a single command:
+
+```bash
+# Generate trajectories from all attack paths
+openworlds trajectory generate \
+    --manifest data/manifests/my_network.json \
+    --failure-rate 0.15 \
+    --format messages \
+    -o data/datasets/trajectories.jsonl
+```
+
+**Output:**
+```
+  ✅ Generated 20 raw trajectories
+  ✅ Injected 8 failure(s) across trajectories
+  ✅ Exported to data/datasets/trajectories.jsonl (messages format)
+    📊 Dataset Statistics
+┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
+┃ Metric            ┃ Value ┃
+┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
+│ Trajectories      │    20 │
+│ Avg Steps         │   8.4 │
+│ Avg Failures/Traj │   0.4 │
+└───────────────────┴───────┘
+```
+
+Each trajectory is a complete attack path from initial access to Domain Admin, formatted as a multi-turn chat conversation:
+
+```json
+{"role": "assistant", "content": "<think>\nI identified svc_sql as a service account with an SPN.\nKerberoasting allows me to request a service ticket and\ncrack the hash offline.\n</think>\n\n<tool_call>\nimpacket-GetUserSPNs WEST.local/b.wright:Hello123 -dc-ip 10.0.1.247 -request\n</tool_call>"}
+
+{"role": "tool", "content": "$krb5tgs$23$*svc_sql$WEST.local*$a1b2c3..."}
+```
+
+**Failure injection** teaches the model to recover from mistakes:
+| Failure Type | Example | What Happens |
+|-------------|---------|--------------|
+| Typo in command | `nmpa -sV 10.0.1.10` | `bash: nmpa: command not found` → corrects to `nmap` |
+| Wrong credentials | `evil-winrm -u admin -p Password1` | `STATUS_LOGON_FAILURE` → uses correct password |
+| Non-existent target | `nmap 10.0.2.250` | `Host seems down` → corrects IP from scan results |
+| Wrong tool | `msfconsole` | `command not found` → falls back to Impacket |
+| Missing flags | `ldapsearch -x 10.0.1.10` | `Missing required argument` → adds correct flags |
+
+---
+
 ## 🎮 Attack Strategies
 
 Generated networks include these attack vectors:
@@ -225,13 +273,13 @@ Attack paths are validated using **NetworkX graph analysis** with 8 edge types, 
 Worlds-OpenSource-Clone/
 ├── openworlds/                    # Main Python package
 │   ├── __init__.py                # Package version
-│   ├── cli.py                     # Typer CLI (manifest generate/show, shell)
-│   ├── world_engine/              # AD network generation
+│   ├── cli.py                     # Typer CLI (manifest, trajectory, shell)
+│   ├── world_engine/              # Layer 1: AD network generation
 │   │   ├── models.py              # 40+ Pydantic models, CVE DB, service templates
 │   │   ├── ad_graph.py            # ManifestGenerator pipeline
 │   │   ├── vuln_injector.py       # 5 vulnerability injectors
 │   │   └── path_validator.py      # NetworkX attack graph + BFS path discovery
-│   ├── tools/                     # Tool simulation layer
+│   ├── tools/                     # Layer 2: Tool simulation
 │   │   ├── simulator.py           # ToolSimulator dispatcher
 │   │   └── handlers/              # 10 tool handlers
 │   │       ├── base.py            # BaseHandler ABC
@@ -245,13 +293,17 @@ Worlds-OpenSource-Clone/
 │   │       ├── bloodhound_handler.py
 │   │       ├── crackmapexec_handler.py
 │   │       └── evil_winrm_handler.py
-│   ├── trajectory/                # Training data pipeline (coming soon)
-│   ├── training/                  # LoRA fine-tuning (coming soon)
-│   └── eval/                      # Evaluation harness (coming soon)
+│   ├── trajectory/                # Layer 3: Training data pipeline
+│   │   ├── state_tracker.py       # Agent knowledge tracking
+│   │   ├── reasoning.py           # <think> trace generation (15+ templates)
+│   │   ├── generator.py           # Attack path → trajectory walker
+│   │   ├── failure_injector.py    # Realistic mistake injection
+│   │   └── formatter.py           # Messages/ChatML JSONL exporter
+│   ├── training/                  # Layer 4: LoRA fine-tuning (coming soon)
+│   └── eval/                      # Layer 4: Evaluation harness (coming soon)
 ├── data/
 │   ├── manifests/                 # Generated network JSON files
-│   ├── trajectories/              # Raw trajectories
-│   └── datasets/                  # Training-ready datasets
+│   └── datasets/                  # Training-ready JSONL datasets
 ├── tests/                         # Test suite (pytest)
 ├── docs/                          # Documentation
 ├── pyproject.toml                 # Build config, deps, ruff, mypy
@@ -297,7 +349,7 @@ Contributions are welcome! Key areas:
 
 ## 🗺️ Roadmap
 
-**v0.1.0 — Foundation (✅ Current)**
+**v0.1.0 — Foundation (✅ Done)**
 - [x] Active Directory network generation (40+ Pydantic models)
 - [x] 5 vulnerability injectors (Kerberoast, AS-REP, ACL abuse, AD CS, share creds)
 - [x] Attack path validation via NetworkX graph analysis
@@ -305,13 +357,14 @@ Contributions are welcome! Key areas:
 - [x] CLI with `manifest generate/show` and interactive shell
 - [x] Reproducible generation via seeds
 
-**v0.2.0 — Training Pipeline (🔜 Next)**
-- [ ] Trajectory generation (walk attack paths → tool call sequences)
-- [ ] Reasoning augmentation via Ollama/vLLM
-- [ ] Failure injection for negative examples
-- [ ] Dataset formatter (ChatML/SFT/DPO)
+**v0.2.0 — Trajectory Pipeline (✅ Done)**
+- [x] Trajectory generation (walk attack paths → tool call sequences)
+- [x] `<think>` reasoning traces (15+ technique templates + optional LLM augmentation)
+- [x] Failure injection (5 types: typos, wrong creds, wrong target, malformed args, wrong tool)
+- [x] Dataset formatter (Messages/ChatML JSONL)
+- [x] CLI: `openworlds trajectory generate`
 
-**v0.3.0 — Agent Training**
+**v0.3.0 — Agent Training (🔜 Next)**
 - [ ] Model-agnostic LoRA/QLoRA fine-tuning pipeline
 - [ ] HuggingFace Hub integration for model + dataset publishing
 

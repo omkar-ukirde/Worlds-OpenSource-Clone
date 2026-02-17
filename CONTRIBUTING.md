@@ -92,6 +92,16 @@ To add a new vulnerability type:
 1. **Add injection logic** in `openworlds/world_engine/vuln_injector.py`
 2. **Add graph edges** in `openworlds/world_engine/path_validator.py`
 3. **Update models** in `openworlds/world_engine/models.py` if new data fields are needed
+4. **Add reasoning templates** in `openworlds/trajectory/reasoning.py` for the new technique
+
+## Extending the Trajectory Pipeline
+
+The trajectory pipeline (`openworlds/trajectory/`) converts attack paths into training data:
+
+- **Add reasoning templates** — edit `REASONING_TEMPLATES` in `reasoning.py` to add `<think>` trace templates for new techniques
+- **Add failure types** — extend `FailureInjector._generate_failure()` in `failure_injector.py`
+- **Add output formats** — extend `formatter.py` with new export functions (e.g., DPO pairs, SFT format)
+- **Improve state tracking** — extend `StateTracker` in `state_tracker.py` for new credential types
 
 ## Reporting Issues
 
