@@ -18,7 +18,7 @@ OpenWorlds lets you:
 3. **Explore** networks interactively via a rich CLI shell
 4. **Create** training trajectories with `<think>` reasoning traces and failure recovery examples
 5. **Export** datasets in ChatML/Messages JSONL format, ready for fine-tuning any LLM
-6. **Fine-tune** any small LLM (8B params) to autonomously perform penetration tests *(coming soon)*
+6. **Fine-tune** any small LLM with LoRA to autonomously perform penetration tests
 
 > The goal: an 8B model fine-tuned on synthetic data that can achieve **full Domain Admin compromise** on real AD networks. No real infrastructure needed for training.
 
@@ -42,9 +42,10 @@ OpenWorlds lets you:
 │  └──────────────┘   └───────────────┘   └──────┬───────┘   │
 │                                                 │           │
 │                                         ┌───────▼───────┐   │
-│                                         │  Training &   │   │
-│                                         │  Evaluation   │   │
-│                                         │ (coming soon) │   │
+│                                         │   Training    │   │
+│                                         │   ✅ Done     │   │
+│                                         │ • LoRA SFT    │   │
+│                                         │ • HF Hub Push │   │
 │                                         └───────────────┘   │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -67,6 +68,9 @@ cd Worlds-OpenSource-Clone
 
 # Install core package
 pip install -e .
+
+# Install with training support (torch, transformers, peft, trl)
+pip install -e ".[training]"
 
 # Install with dev tools
 pip install -e ".[dev]"
@@ -206,16 +210,43 @@ Each tool handler validates credentials, checks permissions, and returns output 
 
 ## 🎓 Generate Training Data
 
-Transform attack paths into fine-tuning datasets with a single command:
+Transform attack paths into fine-tuning datasets. Two reasoning modes:
+
+### Mode 1: Template Reasoning (default, offline)
 
 ```bash
-# Generate trajectories from all attack paths
 openworlds trajectory generate \
     --manifest data/manifests/my_network.json \
     --failure-rate 0.15 \
     --format messages \
     -o data/datasets/trajectories.jsonl
 ```
+
+### Mode 2: LLM-Powered Reasoning (🧠 Intelligent)
+
+Uses Ollama, vLLM, or any OpenAI-compatible API for richer, contextual `<think>` traces:
+
+```bash
+# With Ollama (local)
+openworlds trajectory generate \
+    --llm \
+    --llm-model qwen2.5:32b \
+    --api-base http://localhost:11434/v1
+
+# With vLLM (remote)
+openworlds trajectory generate \
+    --llm \
+    --llm-model meta-llama/Llama-3.2-3B-Instruct \
+    --api-base http://your-server:8000/v1
+
+# With OpenAI API
+OPENAI_API_KEY=sk-xxx openworlds trajectory generate \
+    --llm \
+    --llm-model gpt-4o \
+    --api-base https://api.openai.com/v1
+```
+
+> **Fallback:** If the LLM server is unreachable, it automatically falls back to template reasoning.
 
 **Output:**
 ```
@@ -248,6 +279,77 @@ Each trajectory is a complete attack path from initial access to Domain Admin, f
 | Non-existent target | `nmap 10.0.2.250` | `Host seems down` → corrects IP from scan results |
 | Wrong tool | `msfconsole` | `command not found` → falls back to Impacket |
 | Missing flags | `ldapsearch -x 10.0.1.10` | `Missing required argument` → adds correct flags |
+
+---
+
+## 🧠 Fine-Tune a Model
+
+Train a small LLM on your generated trajectories using LoRA:
+
+### 1. Setup (one-time)
+
+```bash
+# Install training dependencies
+pip install -e ".[training]"
+
+# Login to HuggingFace (needed for gated models like Gemma 3)
+huggingface-cli login
+```
+
+### 2. Train
+
+```bash
+# Fine-tune Gemma 3 270M on your trajectories
+openworlds train run \
+    --model google/gemma-3-270m-it \
+    --dataset data/datasets/trajectories.jsonl \
+    --epochs 3 --lora-r 16 \
+    --chat-format auto \
+    --cpu \
+    -o data/models/my-pentest-agent
+```
+
+Works with **any model** — auto-detects chat template format:
+```bash
+# Llama 3 → auto-detects 'full' format
+openworlds train run --model meta-llama/Llama-3.2-1B-Instruct --cpu
+
+# Qwen 2.5 → auto-detects 'full' format  
+openworlds train run --model Qwen/Qwen2.5-0.5B-Instruct --cpu
+
+# Gemma 3 → auto-detects 'strict_alternation'
+openworlds train run --model google/gemma-3-270m-it --cpu
+```
+
+**Output:**
+```
+🧠 OpenWorlds Training
+  Model: google/gemma-3-270m-it
+  LoRA: r=16, alpha=32
+  
+trainable params: 368,640 || all params: 268,466,816 || trainable%: 0.14
+
+🚀 Starting training...
+{'loss': 3.771, 'epoch': 0.2}
+{'loss': 3.683, 'epoch': 0.6}
+{'loss': 3.565, 'epoch': 1.0}
+✅ Training complete! Loss: 3.5654
+💾 LoRA adapter saved to: data/models/my-pentest-agent/
+
+🧪 Model says: "I'm ready to start. I'll begin by running nmap to discover
+services on the domain controller at 10.0.1.247..."
+```
+
+### 3. Push to HuggingFace Hub (optional)
+
+```bash
+openworlds train run \
+    --model google/gemma-3-270m-it \
+    --dataset data/datasets/trajectories.jsonl \
+    --push-to-hub --hub-id yourname/openworlds-agent
+```
+
+> **Mac Mini M2 (8GB)?** Use `--cpu` flag. For larger models, see [`docs/colab_training.md`](docs/colab_training.md).
 
 ---
 
@@ -299,17 +401,103 @@ Worlds-OpenSource-Clone/
 │   │   ├── generator.py           # Attack path → trajectory walker
 │   │   ├── failure_injector.py    # Realistic mistake injection
 │   │   └── formatter.py           # Messages/ChatML JSONL exporter
-│   ├── training/                  # Layer 4: LoRA fine-tuning (coming soon)
-│   └── eval/                      # Layer 4: Evaluation harness (coming soon)
+│   ├── training/                  # Layer 4: LoRA SFT fine-tuning
+│   │   ├── config.py              # Pydantic training configuration
+│   │   ├── dataset.py             # JSONL → HuggingFace Dataset loader
+│   │   └── trainer.py             # LoRA SFT + merge + HF Hub push
+│   └── eval/                      # Layer 5: Evaluation harness (coming soon)
 ├── data/
 │   ├── manifests/                 # Generated network JSON files
-│   └── datasets/                  # Training-ready JSONL datasets
+│   ├── datasets/                  # Training-ready JSONL datasets
+│   └── models/                    # Saved LoRA adapters
 ├── tests/                         # Test suite (pytest)
-├── docs/                          # Documentation
+├── docs/
+│   └── colab_training.md          # Google Colab GPU training guide
 ├── pyproject.toml                 # Build config, deps, ruff, mypy
 ├── Makefile                       # Dev commands
 ├── LICENSE                        # Apache 2.0
 └── README.md
+```
+
+---
+
+## 📋 CLI Reference
+
+Every command and flag at a glance:
+
+### `openworlds manifest generate`
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--hosts` | 10 | Number of hosts to generate |
+| `--users` | 25 | Number of users to generate |
+| `--seed` | random | Seed for reproducible generation |
+| `-o`, `--output` | `data/manifests/default.json` | Output file path |
+
+### `openworlds manifest show`
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--manifest` | `data/manifests/default.json` | Manifest file to display |
+
+### `openworlds shell`
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--manifest` | `data/manifests/default.json` | Network to explore interactively |
+
+### `openworlds trajectory generate`
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-m`, `--manifest` | `data/manifests/default.json` | Source manifest |
+| `-n`, `--count` | 0 (= all paths) | Max trajectories to generate |
+| `-f`, `--failure-rate` | 0.15 | Failure injection probability |
+| `--format` | `messages` | Output format: `messages` or `chatml` |
+| `-o`, `--output` | `data/datasets/trajectories.jsonl` | Output file |
+| `--seed` | 42 | Random seed |
+| `--no-recon` | false | Skip recon steps |
+| `--llm` | false | **Enable LLM reasoning** (Ollama/vLLM/OpenAI) |
+| `--api-base` | `http://localhost:11434/v1` | OpenAI-compatible API URL |
+| `--llm-model` | `qwen2.5:32b` | LLM model for reasoning |
+
+### `openworlds train run`
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model` | `google/gemma-3-270m-it` | Any HuggingFace model |
+| `--dataset` | `data/datasets/trajectories.jsonl` | Training data |
+| `--epochs` | 3 | Training epochs |
+| `--lr` | 2e-4 | Learning rate |
+| `--batch-size` | 1 | Per-device batch size |
+| `--lora-r` | 16 | LoRA rank |
+| `-o`, `--output` | `data/models/openworlds-agent` | Output directory |
+| `--cpu` | false | Force CPU training |
+| `--chat-format` | `auto` | `auto`, `full`, `no_tool`, `strict_alternation`, `chatml` |
+| `--push-to-hub` | false | Push to HuggingFace Hub |
+| `--hub-id` | none | Hub model ID |
+| `--test/--no-test` | true | Run inference test after training |
+| `--seed` | 42 | Random seed |
+
+### Complete Workflow
+
+```bash
+# 1. Generate a network
+openworlds manifest generate --hosts 20 --users 50 --seed 42
+
+# 2. Explore interactively (optional)
+openworlds shell
+
+# 3. Generate training data (template mode)
+openworlds trajectory generate
+
+# 3b. Or with LLM reasoning (requires Ollama/vLLM)
+openworlds trajectory generate --llm --llm-model qwen2.5:32b
+
+# 4. Install training deps + login
+pip install -e ".[training]"
+huggingface-cli login
+
+# 5. Fine-tune any model
+openworlds train run --model google/gemma-3-270m-it --cpu
+
+# 6. Push to Hub (optional)
+openworlds train run --model google/gemma-3-270m-it --push-to-hub --hub-id you/agent
 ```
 
 ---
@@ -359,16 +547,20 @@ Contributions are welcome! Key areas:
 
 **v0.2.0 — Trajectory Pipeline (✅ Done)**
 - [x] Trajectory generation (walk attack paths → tool call sequences)
-- [x] `<think>` reasoning traces (15+ technique templates + optional LLM augmentation)
+- [x] `<think>` reasoning traces (15+ technique templates + **LLM-powered** via Ollama/vLLM)
 - [x] Failure injection (5 types: typos, wrong creds, wrong target, malformed args, wrong tool)
 - [x] Dataset formatter (Messages/ChatML JSONL)
-- [x] CLI: `openworlds trajectory generate`
+- [x] CLI: `openworlds trajectory generate` with `--llm`, `--api-base`, `--llm-model`
 
-**v0.3.0 — Agent Training (🔜 Next)**
-- [ ] Model-agnostic LoRA/QLoRA fine-tuning pipeline
-- [ ] HuggingFace Hub integration for model + dataset publishing
+**v0.3.0 — Agent Training (✅ Done)**
+- [x] LoRA SFT fine-tuning pipeline (`peft` + `trl`)
+- [x] Gemma 3 270M IT tested end-to-end on 8GB Mac Mini M2 (CPU)
+- [x] HuggingFace Hub integration for model pushing
+- [x] CLI: `openworlds train run` with `--cpu`, `--push-to-hub`, `--lora-r`, `--chat-format`
+- [x] Model-aware chat template auto-detection (Gemma 3, Llama 3, Qwen, Mistral)
+- [x] Google Colab GPU training guide (`docs/colab_training.md`)
 
-**v0.4.0 — Evaluation**
+**v0.4.0 — Evaluation (🔜 Next)**
 - [ ] Simulated evaluation harness with scoring
 - [ ] Optional GOAD integration for sim-to-real validation
 

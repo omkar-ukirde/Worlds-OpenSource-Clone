@@ -34,6 +34,7 @@ data/manifests/*.json
 data/trajectories/*.jsonl
 data/datasets/*.jsonl
 data/datasets/*.parquet
+data/models/
 
 # Model artifacts
 output/

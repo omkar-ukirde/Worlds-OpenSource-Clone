@@ -271,7 +271,9 @@ def generate_reasoning_llm(
     try:
         from openai import OpenAI
 
-        client = OpenAI(base_url=api_base, api_key="unused")
+        client = OpenAI(
+            base_url=api_base, api_key="unused", timeout=10.0,
+        )
 
         prompt = (
             "You are an expert penetration tester narrating your thought process "

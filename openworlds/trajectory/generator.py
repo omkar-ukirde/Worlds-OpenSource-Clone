@@ -20,7 +20,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from openworlds.tools.simulator import ToolSimulator
-from openworlds.trajectory.reasoning import generate_reasoning
+from openworlds.trajectory.reasoning import generate_reasoning, generate_reasoning_llm
 from openworlds.trajectory.state_tracker import (
     CredentialType,
     StateTracker,
@@ -83,10 +83,53 @@ class TrajectoryGenerator:
         self,
         manifest: Manifest,
         seed: int | None = None,
+        *,
+        use_llm: bool = False,
+        api_base: str = "http://localhost:11434/v1",
+        llm_model: str = "qwen2.5:32b",
     ) -> None:
         self.manifest = manifest
         self.simulator = ToolSimulator(manifest)
         self.rng = random.Random(seed)
+        self.use_llm = use_llm
+        self.api_base = api_base
+        self.llm_model = llm_model
+
+    # ------------------------------------------------------------------
+    # Reasoning dispatcher
+    # ------------------------------------------------------------------
+
+    def _reason(
+        self,
+        technique: str,
+        trajectory: Trajectory,
+        action: str = "",
+        observation: str = "",
+        **template_kwargs: Any,
+    ) -> str:
+        """Generate reasoning — LLM if enabled, else templates.
+
+        When LLM is enabled, builds context from the trajectory so far
+        and asks the LLM for realistic reasoning. Falls back to
+        templates automatically if the LLM server is unreachable.
+        """
+        if self.use_llm:
+            # Build trajectory context from steps so far
+            context_parts = []
+            for s in trajectory.steps[-5:]:  # Last 5 steps for context
+                context_parts.append(f"Command: {s.action}")
+                context_parts.append(f"Output: {s.observation[:200]}")
+            context = "\n".join(context_parts) if context_parts else "(start)"
+
+            return generate_reasoning_llm(
+                technique=technique,
+                trajectory_context=context,
+                next_action=action,
+                next_observation=observation,
+                api_base=self.api_base,
+                model=self.llm_model,
+            )
+        return generate_reasoning(technique, **template_kwargs)
 
     def generate_one(
         self,
@@ -214,8 +257,9 @@ class TrajectoryGenerator:
         # Step: nmap scan of DC
         nmap_cmd = f"nmap -sV -sC {dc_ip}"
         nmap_output = self.simulator.execute(nmap_cmd)
-        reasoning = generate_reasoning(
-            "recon_nmap",
+        reasoning = self._reason(
+            "recon_nmap", trajectory,
+            action=nmap_cmd, observation=nmap_output,
             source=start_user.sam_account_name,
             domain=domain,
             dc_ip=dc_ip,
@@ -242,8 +286,9 @@ class TrajectoryGenerator:
             f"ldapsearch -x -H ldap://{dc_ip} -b {dc_components} "
             f"'(servicePrincipalName=*)'"
         )
-        reasoning = generate_reasoning(
-            "recon_ldap",
+        reasoning = self._reason(
+            "recon_ldap", trajectory,
+            action=ldap_cmd, observation=ldap_output,
             source=start_user.sam_account_name,
             domain=domain,
             dc_ip=dc_ip,
@@ -293,8 +338,9 @@ class TrajectoryGenerator:
                     acl_right = acl.right.value
                     break
 
-        reasoning = generate_reasoning(
-            technique,
+        reasoning = self._reason(
+            technique, trajectory,
+            action=cmd, observation=output,
             source=source,
             target=target,
             domain=domain,
@@ -387,8 +433,9 @@ class TrajectoryGenerator:
                 f"Status...........: Exhausted\n"
             )
 
-        reasoning = generate_reasoning(
-            "hash_crack",
+        reasoning = self._reason(
+            "hash_crack", trajectory,
+            action=hashcat_cmd, observation=hashcat_output,
             target=target,
             step_index=step_num,
         )
@@ -443,8 +490,9 @@ class TrajectoryGenerator:
             output = self.simulator.execute(
                 f"secretsdump {domain}/{admin_user}:{admin_pass}@{dc_ip} -just-dc"
             )
-            reasoning = generate_reasoning(
-                "verification_dcsync",
+            reasoning = self._reason(
+                "verification_dcsync", trajectory,
+                action=cmd, observation=output,
                 source=admin_user,
                 domain=domain,
                 dc_ip=dc_ip,
@@ -456,8 +504,9 @@ class TrajectoryGenerator:
             password = cred.password if cred else ""
             cmd = f"crackmapexec smb {dc_ip} -u {user} -p {password}"
             output = self.simulator.execute(f"cme smb {dc_ip} -u {user} -p {password}")
-            reasoning = generate_reasoning(
-                "verification_winrm",
+            reasoning = self._reason(
+                "verification_winrm", trajectory,
+                action=cmd, observation=output,
                 source=user,
                 domain=domain,
             )

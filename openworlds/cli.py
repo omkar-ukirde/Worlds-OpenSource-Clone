@@ -31,8 +31,10 @@ app = typer.Typer(
 
 manifest_app = typer.Typer(help="Manage AD network manifests")
 trajectory_app = typer.Typer(help="Generate training trajectories")
+train_app = typer.Typer(help="Fine-tune models on trajectory data")
 app.add_typer(manifest_app, name="manifest")
 app.add_typer(trajectory_app, name="trajectory")
+app.add_typer(train_app, name="train")
 
 console = Console()
 
@@ -156,6 +158,18 @@ def trajectory_generate(
     no_recon: bool = typer.Option(
         False, "--no-recon", help="Skip reconnaissance steps",
     ),
+    llm: bool = typer.Option(
+        False, "--llm",
+        help="Use LLM for reasoning traces (requires Ollama/vLLM/OpenAI-compatible server)",
+    ),
+    api_base: str = typer.Option(
+        "http://localhost:11434/v1", "--api-base",
+        help="OpenAI-compatible API base URL (Ollama, vLLM, OpenAI)",
+    ),
+    llm_model: str = typer.Option(
+        "qwen2.5:32b", "--llm-model",
+        help="LLM model name for reasoning generation",
+    ),
 ) -> None:
     """Generate training trajectories from a manifest's attack paths."""
     from openworlds.trajectory.failure_injector import FailureInjector
@@ -175,8 +189,17 @@ def trajectory_generate(
         raise typer.Exit(1)
 
     with console.status("[bold green]Generating trajectories..."):
+        # Show reasoning mode
+        if llm:
+            console.print(f"  🧠 LLM reasoning: {llm_model} via {api_base}")
+        else:
+            console.print("  📋 Template reasoning (use --llm for LLM-powered)")
+
         # Generate raw trajectories
-        gen = TrajectoryGenerator(manifest, seed=seed)
+        gen = TrajectoryGenerator(
+            manifest, seed=seed,
+            use_llm=llm, api_base=api_base, llm_model=llm_model,
+        )
         max_count = count if count > 0 else None
         trajectories = gen.generate_all(
             max_trajectories=max_count,
@@ -217,6 +240,123 @@ def trajectory_generate(
     for strat, cnt in sorted(stats.get("strategies", {}).items()):
         strat_table.add_row(strat, str(cnt))
     console.print(strat_table)
+
+
+# ---------------------------------------------------------------------------
+# Train commands
+# ---------------------------------------------------------------------------
+
+
+@train_app.command("run")
+def train_run(
+    model: str = typer.Option(
+        "google/gemma-3-270m-it", "--model", "-m",
+        help="HuggingFace model name or local path",
+    ),
+    dataset: Path = typer.Option(
+        Path("data/datasets/trajectories.jsonl"),
+        "--dataset", "-d",
+        help="Path to JSONL trajectory file",
+    ),
+    epochs: int = typer.Option(3, "--epochs", "-e", help="Number of epochs"),
+    lr: float = typer.Option(2e-4, "--lr", help="Learning rate"),
+    batch_size: int = typer.Option(1, "--batch-size", "-b", help="Batch size"),
+    lora_r: int = typer.Option(16, "--lora-r", help="LoRA rank"),
+    output: str = typer.Option(
+        "data/models/openworlds-agent", "--output", "-o",
+        help="Output directory for the adapter",
+    ),
+    push_to_hub: bool = typer.Option(
+        False, "--push-to-hub", help="Push to HuggingFace Hub",
+    ),
+    hub_id: str = typer.Option(
+        "", "--hub-id", help="HuggingFace Hub model ID (user/model)",
+    ),
+    merge: bool = typer.Option(
+        False, "--merge", help="Merge LoRA into base model before saving",
+    ),
+    test: bool = typer.Option(
+        True, "--test/--no-test", help="Run inference test after training",
+    ),
+    seed: int = typer.Option(42, "--seed", help="Random seed"),
+    cpu: bool = typer.Option(
+        False, "--cpu", help="Force CPU training (avoids MPS OOM on small Macs)",
+    ),
+    chat_format: str = typer.Option(
+        "auto", "--chat-format",
+        help="Chat template format: auto, full (Llama/Qwen), no_tool (Mistral), strict_alternation (Gemma), chatml",
+    ),
+) -> None:
+    """Fine-tune a model on trajectory data using LoRA SFT."""
+    from openworlds.training.config import TrainingConfig
+    from openworlds.training.trainer import OpenWorldsTrainer
+
+    if not dataset.exists():
+        console.print(f"[red]Error:[/] Dataset not found: {dataset}")
+        console.print("Run [bold]openworlds trajectory generate[/] first.")
+        raise typer.Exit(1)
+
+    # Detect Apple Silicon for bf16 (only when not forcing CPU)
+    import platform
+    use_bf16 = (
+        not cpu
+        and platform.processor() == "arm"
+        and platform.system() == "Darwin"
+    )
+
+    config = TrainingConfig(
+        model_name=model,
+        dataset_path=str(dataset),
+        epochs=epochs,
+        learning_rate=lr,
+        batch_size=batch_size,
+        lora_r=lora_r,
+        output_dir=output,
+        push_to_hub=push_to_hub,
+        hub_model_id=hub_id if hub_id else None,
+        bf16=use_bf16,
+        use_cpu=cpu,
+        chat_format=chat_format,
+        seed=seed,
+    )
+
+    console.print(Panel.fit(
+        f"[bold]Model:[/] {config.model_name}\n"
+        f"[bold]Dataset:[/] {config.dataset_path}\n"
+        f"[bold]Epochs:[/] {config.epochs} | [bold]LR:[/] {config.learning_rate}\n"
+        f"[bold]LoRA:[/] r={config.lora_r}, alpha={config.lora_alpha}\n"
+        f"[bold]Output:[/] {config.output_dir}\n"
+        f"[bold]BF16:[/] {config.bf16} | [bold]Push to Hub:[/] {config.push_to_hub}\n"
+        f"[bold]Chat format:[/] {config.chat_format}",
+        title="🧠 OpenWorlds Training",
+        border_style="green",
+    ))
+
+    trainer = OpenWorldsTrainer(config)
+
+    # Train
+    metrics = trainer.train()
+
+    metric_table = Table(title="📊 Training Metrics")
+    metric_table.add_column("Metric", style="bold")
+    metric_table.add_column("Value", justify="right")
+    for key, val in metrics.items():
+        metric_table.add_row(key, f"{val:.4f}" if isinstance(val, float) else str(val))
+    console.print(metric_table)
+
+    # Save
+    save_path = trainer.save(merge=merge)
+    console.print(f"\n💾 Model saved to: [bold]{save_path}[/]")
+
+    # Test inference
+    if test:
+        console.print("\n🧪 Testing inference...")
+        response = trainer.test_inference()
+        console.print(Panel(
+            response[:500],
+            title="Model Response",
+            border_style="cyan",
+        ))
 
 
 # ---------------------------------------------------------------------------
