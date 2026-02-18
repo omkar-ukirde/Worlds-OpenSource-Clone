@@ -286,6 +286,10 @@ Each trajectory is a complete attack path from initial access to Domain Admin, f
 
 Train a small LLM on your generated trajectories using LoRA:
 
+> **🚀 Quick Start:** Skip generation and use our pre-built artifacts:
+> - **Dataset:** [omkar6699/openworlds-ad-trajectories](https://huggingface.co/datasets/omkar6699/openworlds-ad-trajectories)
+> - **Model Adapter:** [omkar6699/openworlds-pentest-agent](https://huggingface.co/omkar6699/openworlds-pentest-agent)
+
 ### 1. Setup (one-time)
 
 ```bash
