@@ -478,6 +478,16 @@ Every command and flag at a glance:
 | `--test/--no-test` | true | Run inference test after training |
 | `--seed` | 42 | Random seed |
 
+### `openworlds eval run`
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-m`, `--model` | `data/models/gemma3-auto` | Trained model or LoRA adapter |
+| `-n`, `--scenarios` | 5 | Number of fresh networks |
+| `--max-steps` | 15 | Max steps per scenario |
+| `--cpu` | false | Force CPU inference |
+| `--seed` | 42 | Random seed |
+| `-o`, `--output` | `data/eval/report.json` | Output JSON report |
+
 ### Complete Workflow
 
 ```bash
@@ -502,7 +512,37 @@ openworlds train run --model google/gemma-3-270m-it --cpu
 
 # 6. Push to Hub (optional)
 openworlds train run --model google/gemma-3-270m-it --push-to-hub --hub-id you/agent
+
+# 7. Evaluate your model
+openworlds eval run --model data/models/my-pentest-agent --scenarios 5 --cpu
 ```
+
+---
+
+## 🧪 Evaluate Your Model
+
+Measure how well your fine-tuned model performs on **fresh, unseen** AD networks:
+
+```bash
+openworlds eval run \
+    --model data/models/gemma3-auto \
+    --scenarios 5 \
+    --max-steps 15 \
+    --cpu
+```
+
+The harness:
+1. Generates fresh AD networks (never seen during training)
+2. Runs the model in an **agent loop** (generate → execute via simulator → observe → repeat)
+3. Scores across **5 metrics**:
+
+| Metric | Description |
+|--------|-------------|
+| **Success Rate** | % scenarios reaching Domain Admin |
+| **Step Efficiency** | ideal_steps / actual_steps (1.0 = perfect) |
+| **Technique Coverage** | unique techniques used / available |
+| **Valid Command Rate** | commands recognized by simulator / total |
+| **Recovery Rate** | successful corrections after failures |
 
 ---
 
@@ -564,8 +604,10 @@ Contributions are welcome! Key areas:
 - [x] Model-aware chat template auto-detection (Gemma 3, Llama 3, Qwen, Mistral)
 - [x] Google Colab GPU training guide (`docs/colab_training.md`)
 
-**v0.4.0 — Evaluation (🔜 Next)**
-- [ ] Simulated evaluation harness with scoring
+**v0.4.0 — Evaluation (✅ Done)**
+- [x] Simulated evaluation harness with agent loop
+- [x] 5-metric scoring (success rate, efficiency, coverage, validity, recovery)
+- [x] CLI: `openworlds eval run` with rich table output
 - [ ] Optional GOAD integration for sim-to-real validation
 
 **v1.0 — Production Ready**

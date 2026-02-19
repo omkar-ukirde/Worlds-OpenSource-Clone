@@ -32,9 +32,11 @@ app = typer.Typer(
 manifest_app = typer.Typer(help="Manage AD network manifests")
 trajectory_app = typer.Typer(help="Generate training trajectories")
 train_app = typer.Typer(help="Fine-tune models on trajectory data")
+eval_app = typer.Typer(help="Evaluate model performance")
 app.add_typer(manifest_app, name="manifest")
 app.add_typer(trajectory_app, name="trajectory")
 app.add_typer(train_app, name="train")
+app.add_typer(eval_app, name="eval")
 
 console = Console()
 
@@ -697,6 +699,100 @@ def _display_manifest_summary(manifest: object, path: Path) -> None:
                 ", ".join(path.strategies_used),
             )
         console.print(path_table)
+
+
+# ---------------------------------------------------------------------------
+# Eval commands
+# ---------------------------------------------------------------------------
+
+
+@eval_app.command("run")
+def eval_run(
+    model_path: str = typer.Option(
+        "data/models/gemma3-auto", "--model", "-m",
+        help="Path to trained model or LoRA adapter",
+    ),
+    scenarios: int = typer.Option(
+        5, "--scenarios", "-n",
+        help="Number of fresh networks to evaluate on",
+    ),
+    max_steps: int = typer.Option(
+        15, "--max-steps",
+        help="Maximum steps per scenario",
+    ),
+    cpu: bool = typer.Option(False, "--cpu", help="Force CPU inference"),
+    seed: int = typer.Option(42, "--seed", help="Random seed"),
+    output: Path = typer.Option(
+        Path("data/eval/report.json"),
+        "--output", "-o",
+        help="Output JSON report path",
+    ),
+) -> None:
+    """Evaluate a model against fresh AD networks."""
+    from openworlds.eval.harness import EvalHarness
+
+    console.print(Panel(
+        f"[bold]Model:[/] {model_path}\n"
+        f"[bold]Scenarios:[/] {scenarios}\n"
+        f"[bold]Max steps:[/] {max_steps}\n"
+        f"[bold]Device:[/] {'CPU' if cpu else 'auto'}",
+        title="🧪 OpenWorlds Evaluation",
+        border_style="blue",
+    ))
+
+    harness = EvalHarness(
+        model_path=model_path,
+        num_scenarios=scenarios,
+        max_steps=max_steps,
+        seed=seed,
+        use_cpu=cpu,
+    )
+
+    with console.status("[bold blue]Running evaluation..."):
+        report = harness.run(print_fn=console.print)
+
+    # Display results
+    console.print()
+
+    # Aggregate metrics table
+    metrics_table = Table(title="📊 Evaluation Results")
+    metrics_table.add_column("Metric", style="bold")
+    metrics_table.add_column("Value", justify="right")
+    metrics_table.add_row("Success Rate", f"{report.success_rate:.1%}")
+    metrics_table.add_row("Avg Step Efficiency", f"{report.avg_step_efficiency:.1%}")
+    metrics_table.add_row("Avg Technique Coverage", f"{report.avg_technique_coverage:.1%}")
+    metrics_table.add_row("Avg Valid Command Rate", f"{report.avg_valid_command_rate:.1%}")
+    metrics_table.add_row("Avg Recovery Rate", f"{report.avg_recovery_rate:.1%}")
+    if report.avg_steps_to_da > 0:
+        metrics_table.add_row("Avg Steps to DA", f"{report.avg_steps_to_da:.1f}")
+    console.print(metrics_table)
+
+    # Per-scenario breakdown
+    scenario_table = Table(title="🎯 Per-Scenario Breakdown")
+    scenario_table.add_column("#", justify="right")
+    scenario_table.add_column("DA", justify="center")
+    scenario_table.add_column("Steps", justify="right")
+    scenario_table.add_column("Efficiency", justify="right")
+    scenario_table.add_column("Coverage", justify="right")
+    scenario_table.add_column("Valid Cmd", justify="right")
+    scenario_table.add_column("Recovery", justify="right")
+
+    for s in report.scenarios:
+        scenario_table.add_row(
+            str(s.scenario_id + 1),
+            "✅" if s.success else "❌",
+            str(s.total_steps),
+            f"{s.step_efficiency:.0%}",
+            f"{s.technique_coverage:.0%}",
+            f"{s.valid_command_rate:.0%}",
+            f"{s.recovery_rate:.0%}",
+        )
+    console.print(scenario_table)
+
+    # Save report
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(report.model_dump_json(indent=2))
+    console.print(f"\n💾 Report saved to {output}")
 
 
 if __name__ == "__main__":
