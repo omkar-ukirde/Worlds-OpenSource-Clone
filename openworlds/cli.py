@@ -66,6 +66,40 @@ def main(
 # Manifest commands
 # ---------------------------------------------------------------------------
 
+@manifest_app.command("import")
+def manifest_import(
+    bloodhound: Path = typer.Option(
+        ..., "--bloodhound", "-b", help="Path to BloodHound .zip export"
+    ),
+    output: Path = typer.Option(
+        Path("data/manifests/imported.json"),
+        "--output", "-o",
+        help="Output path for the manifest JSON",
+    ),
+) -> None:
+    """Import a real-world network from a BloodHound export."""
+    from openworlds.world_engine.bloodhound_parser import BloodHoundParser
+    from openworlds.world_engine.path_validator import PathValidator
+
+    if not bloodhound.exists():
+        console.print(f"[bold red]Error:[/bold red] BloodHound file not found: {bloodhound}")
+        raise typer.Exit(1)
+
+    with console.status(f"[bold cyan]Importing BloodHound data from {bloodhound}...[/bold cyan]"):
+        parser = BloodHoundParser(bloodhound)
+        manifest = parser.parse()
+        console.print("  ✅ Data parsed successfully")
+
+        validator = PathValidator(manifest)
+        paths = validator.find_attack_paths()
+        manifest.attack_paths = paths
+        console.print(f"  ✅ Found {len(paths)} attack path(s) in the imported graph")
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(manifest.model_dump_json(indent=2))
+
+    _display_manifest_summary(manifest, output)
+
 
 @manifest_app.command("generate")
 def manifest_generate(

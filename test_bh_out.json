@@ -1,0 +1,116 @@
+{
+  "domain": {
+    "name": "CORP.LOCAL",
+    "netbios_name": "CORP",
+    "functional_level": "Unknown",
+    "domain_sid": "S-1-5-21-DOMAIN",
+    "subnets": [],
+    "forest_root": true
+  },
+  "hosts": [
+    {
+      "hostname": "DC01",
+      "fqdn": "DC01.CORP.LOCAL",
+      "ip": "10.0.1.10",
+      "mac": "00:50:56:00:00:00",
+      "os": "Windows Server 2019",
+      "os_build": "Unknown",
+      "host_type": "file_server",
+      "subnet": "10.0.1.0/24",
+      "services": [],
+      "local_admins": [],
+      "cves": [],
+      "shares": [],
+      "installed_software": [],
+      "enabled": true
+    }
+  ],
+  "users": [
+    {
+      "sam_account_name": "jsmith",
+      "display_name": "JSMITH",
+      "upn": "jsmith@CORP.LOCAL",
+      "dn": "CN=JSMITH,OU=Users,DC=CORP,DC=LOCAL",
+      "user_type": "standard",
+      "password": "Password1",
+      "password_strength": "weak",
+      "nt_hash": "10958467e0cfac6498d38661c9e75b6e",
+      "sid": "S-1-5-21-USER1",
+      "member_of": [],
+      "ou": "Users",
+      "spn": null,
+      "asrep_roastable": false,
+      "admin_count": false,
+      "description": "",
+      "last_logon": "",
+      "pwd_last_set": "",
+      "account_disabled": false
+    },
+    {
+      "sam_account_name": "admin",
+      "display_name": "ADMIN",
+      "upn": "admin@CORP.LOCAL",
+      "dn": "CN=ADMIN,OU=Users,DC=CORP,DC=LOCAL",
+      "user_type": "admin",
+      "password": "Password1",
+      "password_strength": "weak",
+      "nt_hash": "10958467e0cfac6498d38661c9e75b6e",
+      "sid": "S-1-5-21-USER2",
+      "member_of": [
+        "DOMAIN ADMINS"
+      ],
+      "ou": "Users",
+      "spn": null,
+      "asrep_roastable": false,
+      "admin_count": false,
+      "description": "",
+      "last_logon": "",
+      "pwd_last_set": "",
+      "account_disabled": false
+    }
+  ],
+  "groups": [
+    {
+      "name": "DOMAIN ADMINS",
+      "sam_account_name": "Domain Admins",
+      "dn": "CN=DOMAIN ADMINS,CN=Users,DC=CORP,DC=LOCAL",
+      "sid": "S-1-5-21-GROUP1",
+      "group_type": "security",
+      "group_scope": "global",
+      "members": [],
+      "member_of": []
+    }
+  ],
+  "ous": [],
+  "acls": [
+    {
+      "source": "jsmith",
+      "target": "admin",
+      "right": "ForceChangePassword",
+      "inherited": false
+    }
+  ],
+  "cert_templates": [],
+  "gpos": [],
+  "attack_paths": [],
+  "generated_at": "2026-02-21T19:01:57.967130",
+  "seed": 42,
+  "config": {
+    "num_hosts": 5,
+    "num_subnets": 2,
+    "num_users": 10,
+    "num_groups": 15,
+    "num_ous": 8,
+    "include_kerberoasting": true,
+    "include_asrep_roasting": true,
+    "include_acl_abuse": true,
+    "include_adcs_abuse": true,
+    "include_credential_in_shares": true,
+    "min_attack_path_length": 3,
+    "max_attack_path_length": 8,
+    "password_crack_difficulty": "weak",
+    "starting_user": null,
+    "starting_host": null,
+    "seed": 42
+  }
+}
