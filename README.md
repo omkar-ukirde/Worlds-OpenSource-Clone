@@ -435,6 +435,11 @@ Worlds-OpenSource-Clone/
 
 Every command and flag at a glance:
 
+### Global Flags
+| Flag | Description |
+|------|-------------|
+| `--version`, `-v` | Show OpenWorlds version and exit |
+
 ### `openworlds manifest generate`
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -615,6 +620,11 @@ Contributions are welcome! Key areas:
 - [x] 5-metric scoring (success rate, efficiency, coverage, validity, recovery)
 - [x] CLI: `openworlds eval run` with rich table output
 - [ ] Optional GOAD integration for sim-to-real validation
+
+**v0.5.0 — CLI & Deployment (✅ Done)**
+- [x] Package versioning and CLI `--version` flag
+- [x] Global exception handling via Rich Console
+- [x] PyPI packaging automation (`make build`, `make publish`)
 
 **v1.0 — Production Ready**
 - [ ] PentestJudge (LLM-as-judge for evaluating agent quality)

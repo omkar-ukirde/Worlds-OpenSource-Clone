@@ -16,11 +16,9 @@ Failure types:
 
 from __future__ import annotations
 
-import copy
 import random
 
 from openworlds.trajectory.generator import Trajectory, TrajectoryStep
-
 
 # ---------------------------------------------------------------------------
 # Failure templates

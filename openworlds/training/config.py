@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -90,11 +87,11 @@ class TrainingConfig(BaseModel):
 
     # HuggingFace Hub
     push_to_hub: bool = Field(default=False, description="Push to HuggingFace Hub")
-    hub_model_id: Optional[str] = Field(
+    hub_model_id: str | None = Field(
         default=None,
         description="HuggingFace Hub model ID (e.g. 'username/model-name')",
     )
-    hub_token: Optional[str] = Field(
+    hub_token: str | None = Field(
         default=None,
         description="HuggingFace API token (or set HF_TOKEN env var)",
     )

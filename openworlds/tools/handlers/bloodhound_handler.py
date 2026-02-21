@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 from openworlds.tools.handlers.base import BaseHandler
 
 
@@ -17,17 +15,17 @@ class BloodHoundHandler(BaseHandler):
         """
         lines = [
             f"INFO: Found AD domain: {self.domain.name}",
-            f"INFO: Getting TGT for user",
+            "INFO: Getting TGT for user",
             f"INFO: Connecting to LDAP server: {self._get_dc_fqdn()}",
             f"INFO: Found {len(self.manifest.users)} users",
             f"INFO: Found {len(self.manifest.groups)} groups",
             f"INFO: Found {len(self.manifest.hosts)} computers",
             f"INFO: Found {len(self.manifest.ous)} OUs",
-            f"INFO: Enumerating group memberships",
+            "INFO: Enumerating group memberships",
             f"INFO: Found {sum(len(g.members) for g in self.manifest.groups)} group memberships",
-            f"INFO: Enumerating ACLs",
+            "INFO: Enumerating ACLs",
             f"INFO: Found {len(self.manifest.acls)} ACL entries",
-            f"INFO: Enumerating local admin access",
+            "INFO: Enumerating local admin access",
         ]
 
         # Count local admin relationships

@@ -18,7 +18,6 @@ from pathlib import Path
 
 from openworlds.trajectory.generator import Trajectory, TrajectoryStep
 
-
 # ---------------------------------------------------------------------------
 # Format helpers
 # ---------------------------------------------------------------------------

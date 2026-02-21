@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Template-based reasoning (default — no LLM needed)
 # ---------------------------------------------------------------------------

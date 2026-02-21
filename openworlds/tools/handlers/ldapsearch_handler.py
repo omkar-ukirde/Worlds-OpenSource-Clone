@@ -18,10 +18,10 @@ class LdapsearchHandler(BaseHandler):
         """
         # Parse filter
         ldap_filter = ""
-        base_dn = ""
+        _base_dn = ""
         for i, arg in enumerate(args):
             if arg == "-b" and i + 1 < len(args):
-                base_dn = args[i + 1].strip("'\"")
+                _base_dn = args[i + 1].strip("'\"")
             elif not arg.startswith("-") and "=" in arg:
                 ldap_filter = arg.strip("'\"")
 
@@ -40,24 +40,24 @@ class LdapsearchHandler(BaseHandler):
 
     def _enum_users(self) -> str:
         """Enumerate all user objects."""
-        lines = [f"# extended LDIF", f"#", f"# LDAPv3",
+        lines = ["# extended LDIF", "#", "# LDAPv3",
                  f"# base <{''.join(f'DC={p},' for p in self.domain.name.split('.'))[:-1]}> with scope subtree",
-                 f"# filter: (objectClass=person)", f"# requesting: ALL", f"#", f""]
+                 "# filter: (objectClass=person)", "# requesting: ALL", "#", ""]
 
         for user in self.manifest.users:
             lines.extend([
                 f"# {user.display_name}",
                 f"dn: {user.dn}",
-                f"objectClass: top",
-                f"objectClass: person",
-                f"objectClass: organizationalPerson",
-                f"objectClass: user",
+                "objectClass: top",
+                "objectClass: person",
+                "objectClass: organizationalPerson",
+                "objectClass: user",
                 f"cn: {user.display_name}",
                 f"sAMAccountName: {user.sam_account_name}",
                 f"userPrincipalName: {user.upn}",
                 f"distinguishedName: {user.dn}",
                 f"objectSid: {user.sid}",
-                f"memberOf: " + "\nmemberOf: ".join(
+                "memberOf: " + "\nmemberOf: ".join(
                     f"CN={g},CN=Users,{''.join(f'DC={p},' for p in self.domain.name.split('.'))[:-1]}"
                     for g in user.member_of
                 ) if user.member_of else "",
@@ -68,22 +68,22 @@ class LdapsearchHandler(BaseHandler):
             if user.description:
                 lines.append(f"description: {user.description}")
             if user.admin_count:
-                lines.append(f"adminCount: 1")
+                lines.append("adminCount: 1")
 
-            lines.extend([f"", f""])
+            lines.extend(["", ""])
 
         lines.append(f"# numEntries: {len(self.manifest.users)}")
         return "\n".join(lines)
 
     def _enum_groups(self) -> str:
         """Enumerate group objects."""
-        lines = [f"# extended LDIF", f"# filter: (objectClass=group)", f"#", f""]
+        lines = ["# extended LDIF", "# filter: (objectClass=group)", "#", ""]
 
         for group in self.manifest.groups:
             lines.extend([
                 f"dn: {group.dn}",
-                f"objectClass: top",
-                f"objectClass: group",
+                "objectClass: top",
+                "objectClass: group",
                 f"cn: {group.name}",
                 f"sAMAccountName: {group.sam_account_name}",
                 f"objectSid: {group.sid}",
@@ -93,7 +93,7 @@ class LdapsearchHandler(BaseHandler):
                 lines.append(
                     f"member: CN={member},{''.join(f'DC={p},' for p in self.domain.name.split('.'))[:-1]}"
                 )
-            lines.extend([f"", f""])
+            lines.extend(["", ""])
 
         lines.append(f"# numEntries: {len(self.manifest.groups)}")
         return "\n".join(lines)
@@ -101,14 +101,14 @@ class LdapsearchHandler(BaseHandler):
     def _enum_spns(self) -> str:
         """Enumerate users with SPNs (Kerberoastable)."""
         spn_users = [u for u in self.manifest.users if u.spn]
-        lines = [f"# filter: (servicePrincipalName=*)", f"#", f""]
+        lines = ["# filter: (servicePrincipalName=*)", "#", ""]
 
         for user in spn_users:
             lines.extend([
                 f"dn: {user.dn}",
                 f"sAMAccountName: {user.sam_account_name}",
                 f"servicePrincipalName: {user.spn}",
-                f"", f"",
+                "", "",
             ])
 
         lines.append(f"# numEntries: {len(spn_users)}")
@@ -117,14 +117,14 @@ class LdapsearchHandler(BaseHandler):
     def _enum_asrep(self) -> str:
         """Enumerate AS-REP roastable users."""
         asrep_users = [u for u in self.manifest.users if u.asrep_roastable]
-        lines = [f"# filter: (userAccountControl:1.2.840.113556.1.4.803:=4194304)", f"#", f""]
+        lines = ["# filter: (userAccountControl:1.2.840.113556.1.4.803:=4194304)", "#", ""]
 
         for user in asrep_users:
             lines.extend([
                 f"dn: {user.dn}",
                 f"sAMAccountName: {user.sam_account_name}",
-                f"userAccountControl: 4260352",
-                f"", f"",
+                "userAccountControl: 4260352",
+                "", "",
             ])
 
         lines.append(f"# numEntries: {len(asrep_users)}")
@@ -132,18 +132,18 @@ class LdapsearchHandler(BaseHandler):
 
     def _enum_computers(self) -> str:
         """Enumerate computer objects."""
-        lines = [f"# filter: (objectClass=computer)", f"#", f""]
+        lines = ["# filter: (objectClass=computer)", "#", ""]
 
         for host in self.manifest.hosts:
             dc_components = ",".join(f"DC={p}" for p in self.domain.name.split("."))
             lines.extend([
                 f"dn: CN={host.hostname},OU=Computers,{dc_components}",
-                f"objectClass: computer",
+                "objectClass: computer",
                 f"cn: {host.hostname}",
                 f"dNSHostName: {host.fqdn}",
                 f"operatingSystem: {host.os}",
                 f"operatingSystemVersion: {host.os_build}",
-                f"", f"",
+                "", "",
             ])
 
         lines.append(f"# numEntries: {len(self.manifest.hosts)}")

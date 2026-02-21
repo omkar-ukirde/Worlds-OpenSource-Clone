@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from openworlds.tools.handlers.base import BaseHandler
-from openworlds.world_engine.models import ACLRight, HostType, UserType
+from openworlds.world_engine.models import ACLRight, UserType
 
 
 class SecretsdumpHandler(BaseHandler):
@@ -34,10 +34,10 @@ class SecretsdumpHandler(BaseHandler):
             return f"[-] ERROR: Could not connect to {target_host}"
 
         lines = [
-            f"Impacket v0.11.0 - Copyright 2023 Fortra",
-            f"",
+            "Impacket v0.11.0 - Copyright 2023 Fortra",
+            "",
             f"[*] Target: {host.fqdn}",
-            f"[*] Dumping credentials...",
+            "[*] Dumping credentials...",
         ]
 
         if just_dc:
@@ -61,8 +61,8 @@ class SecretsdumpHandler(BaseHandler):
             )
             return "\n".join(lines)
 
-        lines.append(f"[*] Using the DRSUAPI method to get NTDS.DIT secrets")
-        lines.append(f"[*] Dumping Domain Credentials (domain\\uid:rid:lmhash:nthash)")
+        lines.append("[*] Using the DRSUAPI method to get NTDS.DIT secrets")
+        lines.append("[*] Dumping Domain Credentials (domain\\uid:rid:lmhash:nthash)")
 
         # Dump all users
         for u in self.manifest.users:
@@ -80,8 +80,8 @@ class SecretsdumpHandler(BaseHandler):
             )
 
         lines.extend([
-            f"[*] Kerberos keys grabbed",
-            f"[*] Cleaning up...",
+            "[*] Kerberos keys grabbed",
+            "[*] Cleaning up...",
         ])
         return "\n".join(lines)
 
@@ -96,13 +96,13 @@ class SecretsdumpHandler(BaseHandler):
             return "\n".join(lines)
 
         lines.extend([
-            f"[*] Dumping local SAM hashes (uid:rid:lmhash:nthash)",
+            "[*] Dumping local SAM hashes (uid:rid:lmhash:nthash)",
             f"Administrator:500:aad3b435b51404eeaad3b435b51404ee:{'b' * 32}:::",
             f"Guest:501:aad3b435b51404eeaad3b435b51404ee:{'0' * 32}:::",
         ])
 
         # Dump cached credentials of local admins
-        lines.append(f"[*] Dumping cached domain logon information (domain/uid:hash)")
+        lines.append("[*] Dumping cached domain logon information (domain/uid:hash)")
         for admin_sam in host.local_admins:  # type: ignore
             admin_user = self.find_user(admin_sam)
             if admin_user:
@@ -111,7 +111,7 @@ class SecretsdumpHandler(BaseHandler):
                     f"$DCC2$10240#{admin_user.sam_account_name}#{'c' * 32}"
                 )
 
-        lines.append(f"[*] Cleaning up...")
+        lines.append("[*] Cleaning up...")
         return "\n".join(lines)
 
     def _parse_target(self, args: list[str]) -> str:

@@ -43,17 +43,17 @@ class NmapHandler(BaseHandler):
         host = self.find_host(target)
         if not host:
             return (
-                f"Starting Nmap 7.94SVN ( https://nmap.org )\n"
-                f"Note: Host seems down. If it is really up, but blocking our ping probes, "
-                f"try -Pn\n"
-                f"Nmap done: 1 IP address (0 hosts up) scanned in 3.21 seconds"
+                "Starting Nmap 7.94SVN ( https://nmap.org )\n"
+                "Note: Host seems down. If it is really up, but blocking our ping probes, "
+                "try -Pn\n"
+                "Nmap done: 1 IP address (0 hosts up) scanned in 3.21 seconds"
             )
 
         # Build output
         lines = [
-            f"Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-01-15 14:30 UTC",
+            "Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-01-15 14:30 UTC",
             f"Nmap scan report for {host.fqdn} ({host.ip})",
-            f"Host is up (0.0015s latency).",
+            "Host is up (0.0015s latency).",
         ]
 
         if host.mac:
@@ -80,10 +80,10 @@ class NmapHandler(BaseHandler):
                 # Header
                 if "-sV" in scan_flags or "-sC" in scan_flags or "-A" in scan_flags:
                     lines.append(
-                        f"PORT      STATE SERVICE          VERSION"
+                        "PORT      STATE SERVICE          VERSION"
                     )
                 else:
-                    lines.append(f"PORT      STATE SERVICE")
+                    lines.append("PORT      STATE SERVICE")
 
                 for svc in services_to_show:
                     port_str = f"{svc.port}/{svc.protocol}".ljust(9)
@@ -103,7 +103,7 @@ class NmapHandler(BaseHandler):
             lines.extend([
                 "",
                 f"OS details: {host.os}",
-                f"Network Distance: 1 hop",
+                "Network Distance: 1 hop",
             ])
 
         # Script scan results
@@ -112,16 +112,16 @@ class NmapHandler(BaseHandler):
                 if svc.name == "microsoft-ds" and svc.port == 445:
                     lines.extend([
                         "",
-                        f"Host script results:",
-                        f"|_smb2-security-mode:",
-                        f"|   3:1:1:",
-                        f"|_    Message signing enabled and required" if host.host_type.value == "domain_controller" else f"|_    Message signing enabled but not required",
-                        f"|_smb2-time:",
-                        f"|   date: 2024-01-15T14:30:00",
+                        "Host script results:",
+                        "|_smb2-security-mode:",
+                        "|   3:1:1:",
+                        "|_    Message signing enabled and required" if host.host_type.value == "domain_controller" else "|_    Message signing enabled but not required",
+                        "|_smb2-time:",
+                        "|   date: 2024-01-15T14:30:00",
                     ])
                 if svc.name == "ldap" and svc.port == 389:
                     lines.extend([
-                        f"|_ldap-rootdse:",
+                        "|_ldap-rootdse:",
                         f"|   domainFunctionality: {self.domain.functional_level}",
                         f"|   forestFunctionality: {self.domain.functional_level}",
                         f"|   domainControllerFunctionality: {self.domain.functional_level}",
@@ -131,8 +131,8 @@ class NmapHandler(BaseHandler):
 
         lines.extend([
             "",
-            f"Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .",
-            f"Nmap done: 1 IP address (1 host up) scanned in 8.42 seconds",
+            "Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .",
+            "Nmap done: 1 IP address (1 host up) scanned in 8.42 seconds",
         ])
 
         return "\n".join(lines)

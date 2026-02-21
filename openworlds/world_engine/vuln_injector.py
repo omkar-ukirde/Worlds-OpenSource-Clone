@@ -15,18 +15,17 @@ from __future__ import annotations
 
 import random
 import uuid
-from typing import Any
 
 from openworlds.world_engine.models import (
+    SPN_PATTERNS,
     ACLEntry,
     ACLRight,
     CertificateTemplate,
     HostType,
     Manifest,
     PasswordStrength,
-    SMBShare,
-    SPN_PATTERNS,
     ShareFile,
+    SMBShare,
     UserType,
 )
 

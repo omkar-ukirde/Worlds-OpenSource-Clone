@@ -36,13 +36,13 @@ class CertipyHandler(BaseHandler):
         ]
 
         lines = [
-            f"Certipy v4.8.2 - by Oliver Lyak (ly4k)",
-            f"",
-            f"[*] Finding certificate templates",
+            "Certipy v4.8.2 - by Oliver Lyak (ly4k)",
+            "",
+            "[*] Finding certificate templates",
         ]
 
         if not ca_hosts:
-            lines.append(f"[-] No Certificate Authority found")
+            lines.append("[-] No Certificate Authority found")
             return "\n".join(lines)
 
         ca = ca_hosts[0]
@@ -58,7 +58,7 @@ class CertipyHandler(BaseHandler):
                 vuln_flags.append("[!] VULNERABLE: ESC3 — Enrollment agent")
 
             lines.extend([
-                f"",
+                "",
                 f"  Template Name                : {template.name}",
                 f"  Display Name                 : {template.display_name}",
                 f"  Enrollee Supplies Subject    : {template.enrollee_supplies_subject}",
@@ -98,13 +98,13 @@ class CertipyHandler(BaseHandler):
             return f"[-] Template '{template_name}' requires manager approval"
 
         lines = [
-            f"Certipy v4.8.2 - by Oliver Lyak (ly4k)",
-            f"",
+            "Certipy v4.8.2 - by Oliver Lyak (ly4k)",
+            "",
             f"[*] Requesting certificate for '{target_upn}'",
-            f"[*] Successfully requested certificate",
-            f"[*] Request ID is 42",
+            "[*] Successfully requested certificate",
+            "[*] Request ID is 42",
             f"[*] Got certificate with UPN '{target_upn}'",
-            f"[*] Certificate has no object SID",
+            "[*] Certificate has no object SID",
             f"[*] Saved certificate and private key to '{target_upn.split('@')[0]}.pfx'",
         ]
         return "\n".join(lines)

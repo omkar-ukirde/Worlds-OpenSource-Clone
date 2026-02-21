@@ -21,13 +21,13 @@ class GetNPUsersHandler(BaseHandler):
 
         if not asrep_users:
             return (
-                f"Impacket v0.11.0 - Copyright 2023 Fortra\n\n"
-                f"No entries found!"
+                "Impacket v0.11.0 - Copyright 2023 Fortra\n\n"
+                "No entries found!"
             )
 
         lines = [
-            f"Impacket v0.11.0 - Copyright 2023 Fortra",
-            f"",
+            "Impacket v0.11.0 - Copyright 2023 Fortra",
+            "",
         ]
 
         for u in asrep_users:
@@ -35,7 +35,7 @@ class GetNPUsersHandler(BaseHandler):
             lines.extend([
                 f"[*] {u.sam_account_name} does not require Kerberos preauthentication",
                 hash_str,
-                f"",
+                "",
             ])
 
         return "\n".join(lines)

@@ -60,7 +60,7 @@ class SmbclientHandler(BaseHandler):
             None,
         )
         if not share:
-            return f"tree connect failed: NT_STATUS_BAD_NETWORK_NAME"
+            return "tree connect failed: NT_STATUS_BAD_NETWORK_NAME"
 
         if cmd.startswith("get "):
             filename = cmd[4:].strip()
@@ -77,25 +77,25 @@ class SmbclientHandler(BaseHandler):
             return f"Connection to {hostname} failed (Error NT_STATUS_HOST_UNREACHABLE)"
 
         lines = [
-            f"",
-            f"\tSharename       Type      Comment",
-            f"\t---------       ----      -------",
+            "",
+            "\tSharename       Type      Comment",
+            "\t---------       ----      -------",
         ]
         for share in host.shares:
             stype = "Disk" if share.name not in ("IPC$",) else "IPC"
             lines.append(f"\t{share.name:<15} {stype:<9} ")
 
         lines.extend([
-            f"Reconnecting with SMB1 for workgroup listing.",
-            f"",
+            "Reconnecting with SMB1 for workgroup listing.",
+            "",
         ])
         return "\n".join(lines)
 
     def _list_files(self, share: object) -> str:
         """List files in a share."""
         lines = [
-            f"  .                                   D        0  Mon Jan 15 14:30:00 2024",
-            f"  ..                                  D        0  Mon Jan 15 14:30:00 2024",
+            "  .                                   D        0  Mon Jan 15 14:30:00 2024",
+            "  ..                                  D        0  Mon Jan 15 14:30:00 2024",
         ]
         for f in share.files:  # type: ignore
             size = len(f.content)
@@ -105,7 +105,7 @@ class SmbclientHandler(BaseHandler):
 
         total_files = len(share.files) + 2  # type: ignore
         lines.extend([
-            f"",
+            "",
             f"\t\t{total_files} files, 1073741824 bytes free",
         ])
         return "\n".join(lines)

@@ -1,4 +1,4 @@
-.PHONY: install install-dev install-training test lint format typecheck clean generate shell
+.PHONY: install install-dev install-training test lint format typecheck clean generate shell build publish
 
 # Installation
 install:
@@ -32,6 +32,13 @@ generate:
 
 shell:
 	openworlds shell --manifest data/manifests/default.json
+
+# Packaging
+build: clean
+	python3 -m build
+
+publish: build
+	python3 -m twine upload dist/*
 
 # Cleanup
 clean:

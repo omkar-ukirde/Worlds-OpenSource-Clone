@@ -41,6 +41,27 @@ app.add_typer(eval_app, name="eval")
 console = Console()
 
 
+def version_callback(value: bool) -> None:
+    if value:
+        console.print(f"🌐 OpenWorlds [bold blue]v{__version__}[/bold blue]")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        None,
+        "--version",
+        "-v",
+        callback=version_callback,
+        is_eager=True,
+        help="Show version and exit.",
+    ),
+) -> None:
+    """🌐 OpenWorlds — Simulation engine for agentic pentesting."""
+    pass
+
+
 # ---------------------------------------------------------------------------
 # Manifest commands
 # ---------------------------------------------------------------------------
@@ -795,5 +816,14 @@ def eval_run(
     console.print(f"\n💾 Report saved to {output}")
 
 
+def run_cli() -> None:
+    """Run the Typer application with global exception handling."""
+    try:
+        app()
+    except Exception as e:
+        console.print(f"\n[bold red]Error:[/bold red] {e}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
-    app()
+    run_cli()

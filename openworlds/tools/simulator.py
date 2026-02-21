@@ -7,20 +7,19 @@ realistic simulated output.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from openworlds.world_engine.models import Manifest
-from openworlds.tools.handlers.nmap_handler import NmapHandler
-from openworlds.tools.handlers.ldapsearch_handler import LdapsearchHandler
-from openworlds.tools.handlers.smbclient_handler import SmbclientHandler
-from openworlds.tools.handlers.secretsdump_handler import SecretsdumpHandler
-from openworlds.tools.handlers.getuserspns_handler import GetUserSPNsHandler
-from openworlds.tools.handlers.getnpusers_handler import GetNPUsersHandler
-from openworlds.tools.handlers.certipy_handler import CertipyHandler
 from openworlds.tools.handlers.bloodhound_handler import BloodHoundHandler
+from openworlds.tools.handlers.certipy_handler import CertipyHandler
 from openworlds.tools.handlers.crackmapexec_handler import CrackMapExecHandler
 from openworlds.tools.handlers.evil_winrm_handler import EvilWinRMHandler
+from openworlds.tools.handlers.getnpusers_handler import GetNPUsersHandler
+from openworlds.tools.handlers.getuserspns_handler import GetUserSPNsHandler
+from openworlds.tools.handlers.ldapsearch_handler import LdapsearchHandler
+from openworlds.tools.handlers.nmap_handler import NmapHandler
+from openworlds.tools.handlers.secretsdump_handler import SecretsdumpHandler
+from openworlds.tools.handlers.smbclient_handler import SmbclientHandler
+from openworlds.world_engine.models import Manifest
 
 
 class ToolSimulator:

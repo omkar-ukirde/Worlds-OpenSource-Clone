@@ -55,9 +55,9 @@ class EvilWinRMHandler(BaseHandler):
 
         if not auth_ok:
             return (
-                f"Evil-WinRM shell v3.5\n\n"
-                f"Error: An error of type WinRM::WinRMAuthorizationError happened, "
-                f"message is WinRM::WinRMAuthorizationError"
+                "Evil-WinRM shell v3.5\n\n"
+                "Error: An error of type WinRM::WinRMAuthorizationError happened, "
+                "message is WinRM::WinRMAuthorizationError"
             )
 
         # Check if user has access (local admin)

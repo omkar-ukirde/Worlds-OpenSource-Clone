@@ -14,12 +14,10 @@ Flow:
 from __future__ import annotations
 
 import re
-import time
 from typing import Any
 
 from openworlds.eval.models import EvalReport, EvalStep, ScenarioResult
 from openworlds.eval.scorer import EvalScorer
-
 
 # Regex to extract commands from model output
 CMD_PATTERN = re.compile(
@@ -352,11 +350,11 @@ class EvalHarness:
             for msg in messages:
                 role = msg["role"]
                 content = msg["content"]
-                
+
                 if role == "system":
                     content = f"[SYSTEM]\n{content}\n[/SYSTEM]"
                     role = "user"
-                
+
                 if filtered and filtered[-1]["role"] == role:
                     # Merge adjacent messages of the same role
                     filtered[-1]["content"] += f"\n\n{content}"

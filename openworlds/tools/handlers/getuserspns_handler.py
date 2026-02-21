@@ -31,15 +31,15 @@ class GetUserSPNsHandler(BaseHandler):
 
         if not spn_users:
             return (
-                f"Impacket v0.11.0 - Copyright 2023 Fortra\n\n"
-                f"No entries found!"
+                "Impacket v0.11.0 - Copyright 2023 Fortra\n\n"
+                "No entries found!"
             )
 
         lines = [
-            f"Impacket v0.11.0 - Copyright 2023 Fortra",
-            f"",
-            f"ServicePrincipalName                    Name                    MemberOf",
-            f"--------------------------------------  ----------------------  --------",
+            "Impacket v0.11.0 - Copyright 2023 Fortra",
+            "",
+            "ServicePrincipalName                    Name                    MemberOf",
+            "--------------------------------------  ----------------------  --------",
         ]
 
         for u in spn_users:
@@ -49,12 +49,12 @@ class GetUserSPNsHandler(BaseHandler):
             )
 
         if request_mode:
-            lines.extend([f"", f""])
+            lines.extend(["", ""])
             for u in spn_users:
                 # Generate a realistic-looking Kerberos ticket hash
                 ticket_hash = self._generate_krb5tgs_hash(u.sam_account_name, u.nt_hash)
                 lines.append(ticket_hash)
-                lines.append(f"")
+                lines.append("")
 
         return "\n".join(lines)
 

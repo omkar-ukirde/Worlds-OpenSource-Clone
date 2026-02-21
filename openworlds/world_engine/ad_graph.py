@@ -17,17 +17,21 @@ separate modules (vuln_injector.py and path_validator.py).
 from __future__ import annotations
 
 import random
-import string
 import uuid
 from datetime import datetime, timedelta
 
 from openworlds.world_engine.models import (
-    ACLEntry,
-    CVE,
-    CVE_DATABASE,
-    CertificateTemplate,
-    Domain,
+    DEPARTMENT_NAMES,
+    FIRST_NAMES,
     GPO,
+    LAST_NAMES,
+    MEDIUM_PASSWORDS,
+    SERVICE_ACCOUNT_PREFIXES,
+    SERVICE_ACCOUNT_PURPOSES,
+    SERVICE_TEMPLATES,
+    STRONG_PASSWORDS,
+    WEAK_PASSWORDS,
+    Domain,
     Group,
     Host,
     HostType,
@@ -35,22 +39,11 @@ from openworlds.world_engine.models import (
     ManifestConfig,
     OrganizationalUnit,
     PasswordStrength,
-    SMBShare,
-    SPN_PATTERNS,
-    SERVICE_ACCOUNT_PREFIXES,
-    SERVICE_ACCOUNT_PURPOSES,
-    SERVICE_TEMPLATES,
     Service,
-    ShareFile,
+    SMBShare,
     Subnet,
     User,
     UserType,
-    DEPARTMENT_NAMES,
-    FIRST_NAMES,
-    LAST_NAMES,
-    MEDIUM_PASSWORDS,
-    STRONG_PASSWORDS,
-    WEAK_PASSWORDS,
 )
 
 
@@ -348,11 +341,6 @@ class ManifestGenerator:
         self, domain: Domain, dc_components: str, index: int
     ) -> User:
         """Create an admin user (IT admin, DA, etc.)."""
-        admin_patterns = [
-            ("adm_{last}", "Admin"),
-            ("{first[0]}.{last}.admin", "Admin"),
-            ("admin.{last}", "Admin"),
-        ]
         first = self.rng.choice(FIRST_NAMES)
         last = self.rng.choice(LAST_NAMES)
 
