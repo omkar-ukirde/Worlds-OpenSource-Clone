@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from pydantic import BaseModel, Field
 
 
@@ -31,6 +32,7 @@ class ScenarioResult(BaseModel):
     strategies_available: list[str] = Field(default_factory=list)
     techniques_used: list[str] = Field(default_factory=list)
     error: str = ""  # If scenario errored
+    judge_scores: dict[str, Any] = Field(default_factory=dict)
 
 
 class ScenarioScore(BaseModel):
@@ -43,6 +45,11 @@ class ScenarioScore(BaseModel):
     valid_command_rate: float = 0.0  # valid commands / total
     recovery_rate: float = 0.0  # recoveries / failures (1.0 if no failures)
     total_steps: int = 0
+    judge_stealth_score: int = 0
+    judge_efficiency_score: int = 0
+    judge_adaptability_score: int = 0
+    judge_overall_score: int = 0
+    judge_feedback: str = ""
 
 
 class EvalReport(BaseModel):
@@ -61,6 +68,7 @@ class EvalReport(BaseModel):
     avg_valid_command_rate: float = 0.0
     avg_recovery_rate: float = 0.0
     avg_steps_to_da: float = 0.0
+    avg_judge_score: float = 0.0
 
     # Per-scenario breakdown
     scenarios: list[ScenarioScore] = Field(default_factory=list)

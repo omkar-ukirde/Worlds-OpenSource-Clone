@@ -782,6 +782,18 @@ def eval_run(
         "--output", "-o",
         help="Output JSON report path",
     ),
+    dynamic_defense: bool = typer.Option(
+        False, "--dynamic-defense",
+        help="Enable Blue Team noise-tracking and dynamic port blocking",
+    ),
+    use_judge: bool = typer.Option(
+        False, "--use-judge",
+        help="Enable PentestJudge LLM evaluation of agent workflows",
+    ),
+    export_dpo: str = typer.Option(
+        None, "--export-dpo",
+        help="Export DPO preference dataset to this path (e.g. data.jsonl)",
+    ),
 ) -> None:
     """Evaluate a model against fresh AD networks."""
     from openworlds.eval.harness import EvalHarness
@@ -790,7 +802,9 @@ def eval_run(
         f"[bold]Model:[/] {model_path}\n"
         f"[bold]Scenarios:[/] {scenarios}\n"
         f"[bold]Max steps:[/] {max_steps}\n"
-        f"[bold]Device:[/] {'CPU' if cpu else 'auto'}",
+        f"[bold]Device:[/] {'CPU' if cpu else 'auto'}\n"
+        f"[bold]Dynamic Defense:[/] {'✅ On' if dynamic_defense else '❌ Off'}\n"
+        f"[bold]LLM Judge:[/] {'✅ On' if use_judge else '❌ Off'}",
         title="🧪 OpenWorlds Evaluation",
         border_style="blue",
     ))
@@ -802,6 +816,8 @@ def eval_run(
         seed=seed,
         use_cpu=cpu,
     )
+    
+    harness.set_features(dynamic_defense, use_judge, export_dpo)
 
     with console.status("[bold blue]Running evaluation..."):
         report = harness.run(print_fn=console.print)
@@ -820,6 +836,8 @@ def eval_run(
     metrics_table.add_row("Avg Recovery Rate", f"{report.avg_recovery_rate:.1%}")
     if report.avg_steps_to_da > 0:
         metrics_table.add_row("Avg Steps to DA", f"{report.avg_steps_to_da:.1f}")
+    if use_judge:
+        metrics_table.add_row("Avg Judge Score", f"{report.avg_judge_score:.1f}/100")
     console.print(metrics_table)
 
     # Per-scenario breakdown

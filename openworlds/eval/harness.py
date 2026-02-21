@@ -79,7 +79,16 @@ class EvalHarness:
         self.max_steps = max_steps
         self.seed = seed
         self.use_cpu = use_cpu
+        self.dynamic_defense = False
+        self.use_judge = False
+        self.export_dpo = None
         self.scorer = EvalScorer()
+
+    def set_features(self, dynamic_defense: bool, use_judge: bool, export_dpo: str | None = None) -> None:
+        """Enable Phase 8 dynamic defense and judge features."""
+        self.dynamic_defense = dynamic_defense
+        self.use_judge = use_judge
+        self.export_dpo = export_dpo
 
     def run(self, print_fn: Any = print) -> EvalReport:
         """Run evaluation across all scenarios.
@@ -112,7 +121,36 @@ class EvalHarness:
 
         # Score
         scores = [self.scorer.score_scenario(r) for r in results]
-        return self.scorer.aggregate(scores, results, self.model_path, self.max_steps)
+        report = self.scorer.aggregate(scores, results, self.model_path, self.max_steps)
+        
+        # Export DPO if requested
+        if self.export_dpo:
+            self._export_dpo_dataset(results)
+            print_fn(f"  💾 Exported DPO preference dataset to: {self.export_dpo}")
+            
+        return report
+
+    def _export_dpo_dataset(self, results: list[ScenarioResult]) -> None:
+        """Export a JSONL Direct Preference Optimization dataset based on judge feedback."""
+        import json
+        with open(self.export_dpo, "w") as f:
+            for r in results:
+                # In DPO, we want a chosen (good) and rejected (bad) completion for the same prompt.
+                # Here we simplify: we just record single trajectories and their score. 
+                # Real DPO would sample multiple trajectories per prompt and pair them.
+                # For Phase 8 demonstration, we'll store the raw trace + judge score as a building block.
+                score = r.judge_scores.get('overall_score', 0)
+                dpo_entry = {
+                    "scenario": r.domain,
+                    "trajectory_length": len(r.steps),
+                    "judge_overall_score": score,
+                    "judge_feedback": r.judge_scores.get('feedback', ''),
+                    "is_chosen": True if score > 70 else False,
+                    "prompt": "You are an expert penetration tester...",
+                    "completion": "\\n".join(f"Action: {s.action}\\nObs: {s.observation}" for s in r.steps)
+                }
+                f.write(json.dumps(dpo_entry) + "\\n")
+
 
     # ------------------------------------------------------------------
     # Internal: model loading
@@ -201,7 +239,7 @@ class EvalHarness:
         from openworlds.tools.simulator import ToolSimulator
         from openworlds.world_engine.models import HostType
 
-        simulator = ToolSimulator(manifest)
+        simulator = ToolSimulator(manifest, dynamic_defense=self.dynamic_defense)
 
         # Find starting user and DC
         start_user = None
@@ -322,12 +360,28 @@ class EvalHarness:
             messages.append({"role": "assistant", "content": response_text})
             messages.append({"role": "user", "content": f"```\n{observation}\n```"})
 
-            # Check for DA achievement
             if self._check_da_achieved(observation, cmd):
                 result.reached_da = True
                 break
 
         result.total_steps = len(result.steps)
+
+        # Let the PentestJudge grade the final trajectory
+        if self.use_judge:
+            from openworlds.eval.pentest_judge import PentestJudge
+            judge = PentestJudge() # Assuming no pipeline set up for API yet
+            
+            trajectory_history = [{"command": s.action, "observation": s.observation} for s in result.steps]
+            scorecard = judge.score_trajectory(trajectory_history)
+            
+            result.judge_scores = {
+                "stealth_score": scorecard.stealth_score,
+                "efficiency_score": scorecard.efficiency_score,
+                "adaptability_score": scorecard.adaptability_score,
+                "overall_score": scorecard.overall_score,
+                "feedback": scorecard.feedback,
+            }
+
         return result
 
     # ------------------------------------------------------------------

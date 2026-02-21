@@ -20,6 +20,7 @@ from openworlds.tools.handlers.nmap_handler import NmapHandler
 from openworlds.tools.handlers.secretsdump_handler import SecretsdumpHandler
 from openworlds.tools.handlers.smbclient_handler import SmbclientHandler
 from openworlds.world_engine.models import Manifest
+from openworlds.world_engine.blue_team import BlueTeamAgent
 
 
 class ToolSimulator:
@@ -30,8 +31,11 @@ class ToolSimulator:
         output = simulator.execute("nmap -sV -p- 10.0.1.10")
     """
 
-    def __init__(self, manifest: Manifest) -> None:
+    def __init__(self, manifest: Manifest, dynamic_defense: bool = False) -> None:
         self.manifest = manifest
+        self.dynamic_defense = dynamic_defense
+        self.blue_team = BlueTeamAgent(manifest) if dynamic_defense else None
+        
         self.handlers: dict[str, Any] = {
             "nmap": NmapHandler(manifest),
             "ldapsearch": LdapsearchHandler(manifest),
@@ -73,7 +77,34 @@ class ToolSimulator:
             return f"Error: Unknown tool '{tool_name}'. Available: {', '.join(sorted(set(self.handlers.keys())))}"
 
         try:
-            return handler.execute(parts[1:])
+            output_prefix = ""
+            if self.dynamic_defense and self.blue_team:
+                # Basic heuristic base-noise estimation (simplified for now)
+                noise_score = 5.0
+                if "nmap" in command:
+                    noise_score = 15.0 if "-p-" in command else 5.0
+                elif "crackmapexec" in command or "kerberoast" in command:
+                    noise_score = 25.0
+                
+                target = parts[-1] if len(parts) > 1 else "network"
+                source_ip = "10.0.1.99" # Default attacker IP
+                
+                retaliation = self.blue_team.report_noise(source_ip, command, target, noise_score)
+                if retaliation:
+                    if "blocked" in retaliation.lower() or "disconnected" in retaliation.lower():
+                        return retaliation
+                    output_prefix = retaliation + "\n\n"
+
+            result = handler.execute(parts[1:])
+            # If blue team closed the port mid-scan, the handler output wouldn't know
+            # A true integration would pass blue_team to the handler, but we simulate it by altering output
+            if self.dynamic_defense and self.blue_team and "nmap" in command:
+                target = parts[-1]
+                if self.blue_team.is_port_blocked(target, 445):
+                    result = result.replace("445/tcp open", "445/tcp filtered")
+                    result = result.replace("135/tcp open", "135/tcp filtered")
+
+            return output_prefix + result
         except Exception as e:
             return f"Error executing {tool_name}: {e}"
 

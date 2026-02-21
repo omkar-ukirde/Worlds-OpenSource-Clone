@@ -49,6 +49,11 @@ class EvalScorer:
             valid_command_rate=round(valid_rate, 3),
             recovery_rate=round(recovery, 3),
             total_steps=total,
+            judge_stealth_score=result.judge_scores.get('stealth_score', 0),
+            judge_efficiency_score=result.judge_scores.get('efficiency_score', 0),
+            judge_adaptability_score=result.judge_scores.get('adaptability_score', 0),
+            judge_overall_score=result.judge_scores.get('overall_score', 0),
+            judge_feedback=result.judge_scores.get('feedback', ''),
         )
 
     def aggregate(
@@ -89,6 +94,9 @@ class EvalScorer:
             avg_steps_to_da=round(
                 sum(s.total_steps for s in successes) / len(successes), 1,
             ) if successes else 0.0,
+            avg_judge_score=round(
+                sum(s.judge_overall_score for s in scores) / n, 1,
+            ) if n > 0 else 0.0,
             scenarios=scores,
             raw_results=raw_results,
         )

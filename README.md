@@ -119,6 +119,17 @@ This creates a complete Active Directory network with:
 └───────────────────────────┴───────┘
 ```
 
+### Import Real Networks (BloodHound)
+
+Instead of generating a synthetic network, you can train your AI agents on your **real corporate environment**:
+
+```bash
+# Import a BloodHound v4 zip export and map to OpenWorlds manifests
+openworlds manifest import \
+    --bloodhound example_bloodhound_export.zip \
+    -o data/manifests/real_network.json
+```
+
 ### Explore Interactively
 
 ```bash
@@ -497,6 +508,9 @@ Every command and flag at a glance:
 | `--max-steps` | 15 | Max steps per scenario |
 | `--cpu` | false | Force CPU inference |
 | `--seed` | 42 | Random seed |
+| `--dynamic-defense` | false | Enable Blue Team noisy retaliation / filtering |
+| `--use-judge`   | false   | Run trajectories through PentestJudge LLM API |
+| `--export-dpo`  | none    | Path to output a DPO preference dataset `jsonl` |
 | `-o`, `--output` | `data/eval/report.json` | Output JSON report |
 
 ### Complete Workflow
@@ -532,14 +546,18 @@ openworlds eval run --model data/models/my-pentest-agent --scenarios 5 --cpu
 
 ## 🧪 Evaluate Your Model
 
-Measure how well your fine-tuned model performs on **fresh, unseen** AD networks:
+Measure how well your fine-tuned model performs on **fresh, unseen** AD networks.
+
+OpenWorlds supports an **Adversarial Evaluation Loop** where the Blue Team simulates dropping connections based on agent noise (Nmap port sweeps, spraying) while the *PentestJudge* LLM evaluates trajectory stealth and efficiency.
 
 ```bash
 openworlds eval run \
     --model data/models/gemma3-auto \
     --scenarios 5 \
     --max-steps 15 \
-    --cpu
+    --dynamic-defense \
+    --use-judge \
+    --export-dpo data/eval/preferences_dpo.jsonl
 ```
 
 The harness:
