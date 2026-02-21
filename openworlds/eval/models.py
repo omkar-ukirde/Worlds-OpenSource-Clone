@@ -64,3 +64,6 @@ class EvalReport(BaseModel):
 
     # Per-scenario breakdown
     scenarios: list[ScenarioScore] = Field(default_factory=list)
+
+    # Raw results (full traces)
+    raw_results: list[ScenarioResult] = Field(default_factory=list)

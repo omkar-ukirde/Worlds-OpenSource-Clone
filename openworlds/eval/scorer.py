@@ -54,6 +54,7 @@ class EvalScorer:
     def aggregate(
         self,
         scores: list[ScenarioScore],
+        raw_results: list[ScenarioResult],
         model_path: str,
         max_steps: int,
     ) -> EvalReport:
@@ -89,4 +90,5 @@ class EvalScorer:
                 sum(s.total_steps for s in successes) / len(successes), 1,
             ) if successes else 0.0,
             scenarios=scores,
+            raw_results=raw_results,
         )

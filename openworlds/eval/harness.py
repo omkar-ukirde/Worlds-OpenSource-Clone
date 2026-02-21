@@ -93,7 +93,7 @@ class EvalHarness:
             EvalReport with aggregate and per-scenario scores.
         """
         # Load model once
-        print_fn("  Loading model...", flush=True)
+        print_fn("  Loading model...")
         model, tokenizer = self._load_model()
         print_fn(f"  ✅ Model loaded: {self.model_path}")
 
@@ -114,7 +114,7 @@ class EvalHarness:
 
         # Score
         scores = [self.scorer.score_scenario(r) for r in results]
-        return self.scorer.aggregate(scores, self.model_path, self.max_steps)
+        return self.scorer.aggregate(scores, results, self.model_path, self.max_steps)
 
     # ------------------------------------------------------------------
     # Internal: model loading
@@ -347,24 +347,29 @@ class EvalHarness:
 
         # Try using chat template
         try:
-            # Filter to only user/assistant roles for strict models
+            # Filter and merge to strictly alternate user/assistant for models like Gemma
             filtered = []
             for msg in messages:
                 role = msg["role"]
+                content = msg["content"]
+                
                 if role == "system":
-                    # Keep system if supported
-                    filtered.append(msg)
-                elif role in ("user", "assistant"):
-                    filtered.append(msg)
+                    content = f"[SYSTEM]\n{content}\n[/SYSTEM]"
+                    role = "user"
+                
+                if filtered and filtered[-1]["role"] == role:
+                    # Merge adjacent messages of the same role
+                    filtered[-1]["content"] += f"\n\n{content}"
                 else:
-                    filtered.append({"role": "user", "content": msg["content"]})
+                    filtered.append({"role": role, "content": content})
 
             prompt = tokenizer.apply_chat_template(
                 filtered,
                 tokenize=False,
                 add_generation_prompt=True,
             )
-        except Exception:
+        except Exception as e:
+            print(f"Chat template failed: {e}")
             # Fallback: concatenate messages
             parts = []
             for msg in messages:

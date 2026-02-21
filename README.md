@@ -295,9 +295,15 @@ Train a small LLM on your generated trajectories using LoRA:
 ```bash
 # Install training dependencies
 pip install -e ".[training]"
+```
 
-# Login to HuggingFace (needed for gated models like Gemma 3)
+**HuggingFace Login:**
+Many models (like Gemma 3) are gated. You need to log in to download them and to push your adapters later.
+1. Create a token at [hf.co/settings/tokens](https://huggingface.co/settings/tokens) (make sure it has `Write` access if you plan to push).
+2. Login via CLI:
+```bash
 huggingface-cli login
+# Paste your token when prompted
 ```
 
 ### 2. Train
