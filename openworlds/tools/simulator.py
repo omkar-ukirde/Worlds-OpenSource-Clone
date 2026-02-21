@@ -19,6 +19,8 @@ from openworlds.tools.handlers.ldapsearch_handler import LdapsearchHandler
 from openworlds.tools.handlers.nmap_handler import NmapHandler
 from openworlds.tools.handlers.secretsdump_handler import SecretsdumpHandler
 from openworlds.tools.handlers.smbclient_handler import SmbclientHandler
+from openworlds.tools.handlers.ssh import SSHHandler
+from openworlds.tools.handlers.aws import AWSHandler
 from openworlds.world_engine.models import Manifest
 from openworlds.world_engine.blue_team import BlueTeamAgent
 
@@ -55,6 +57,8 @@ class ToolSimulator:
             "crackmapexec": CrackMapExecHandler(manifest),
             "cme": CrackMapExecHandler(manifest),
             "evil-winrm": EvilWinRMHandler(manifest),
+            "ssh": SSHHandler(manifest),
+            "aws": AWSHandler(manifest),
         }
 
     def execute(self, command: str) -> str:

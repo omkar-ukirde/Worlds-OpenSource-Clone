@@ -64,11 +64,14 @@ class BaseHandler(ABC):
         Returns (domain, username, password).
         """
         for arg in args:
-            if "/" in arg and ":" in arg:
-                domain_user, password = arg.rsplit(":", 1)
+            # Strip the @TARGET suffix if it exists
+            cred_str = arg.split("@")[0] if "@" in arg else arg
+            
+            if "/" in cred_str and ":" in cred_str:
+                domain_user, password = cred_str.rsplit(":", 1)
                 domain, user = domain_user.split("/", 1)
                 return domain, user, password
-            elif "/" in arg:
-                domain, user = arg.split("/", 1)
+            elif "/" in cred_str:
+                domain, user = cred_str.split("/", 1)
                 return domain, user, ""
         return "", "", ""

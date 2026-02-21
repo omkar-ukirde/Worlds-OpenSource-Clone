@@ -34,12 +34,13 @@ OpenWorlds lets you:
 │  │ World Engine  │──▶│ Tool Simulator│──▶│  Trajectory   │   │
 │  │   ✅ Done    │   │   ✅ Done     │   │   Pipeline    │   │
 │  │ • Manifest   │   │ • nmap        │   │   ✅ Done     │   │
-│  │   Generator  │   │ • ldapsearch  │   │              │   │
-│  │ • Vuln       │   │ • Impacket    │   │ • Reasoning  │   │
-│  │   Injector   │   │ • certipy     │   │   Traces     │   │
-│  │ • Path       │   │ • smbclient   │   │ • Failure    │   │
-│  │   Validator  │   │ • 10+ tools   │   │   Injection  │   │
-│  └──────────────┘   └───────────────┘   └──────┬───────┘   │
+│  │   Generator  │   │ • ldapsearch  │   │               │   │
+│  │ • Vuln       │   │ • curl/HTTP   │   │ • Reasoning   │   │
+│  │   Injector   │   │ • ffuf/sqlmap │   │   Traces      │   │
+│  │ • Web Apps   │   │ • Impacket    │   │ • Failure     │   │
+│  │ • Path       │   │ • certipy     │   │   Injection   │   │
+│  │   Validator  │   │ • smbclient   │   │               │   │
+│  └──────────────┘   └───────────────┘   └──────┬──────┘   │
 │                                                 │           │
 │                                         ┌───────▼───────┐   │
 │                                         │   Training    │   │
@@ -94,8 +95,9 @@ This creates a complete Active Directory network with:
 - **AS-REP Roastable** users without Kerberos pre-authentication
 - **ACL abuse chains** (GenericAll → WriteDACL → DCSync)
 - **AD CS** vulnerable certificate templates (ESC1, ESC2)
+- **Web Applications** dynamically routed with OWASP Top 10 vulnerabilities (SQLi, IDOR, LFI)
 - **Credentials in SMB shares** (SYSVOL GPPs, scripts, config files)
-- At least one valid multi-step path from low-privilege user to Domain Admin
+- At least one valid multi-step path from low-privilege user to Domain Admin/Root
 
 **Example output:**
 
@@ -572,6 +574,32 @@ The harness:
 | **Technique Coverage** | unique techniques used / available |
 | **Valid Command Rate** | commands recognized by simulator / total |
 | **Recovery Rate** | successful corrections after failures |
+
+---
+
+## 🚀 Enterprise Features (RL & Multi-Agent Swarm)
+
+OpenWorlds goes beyond basic Supervised Fine-Tuning by providing advanced features for state-of-the-art agentic offensive research.
+
+### Reinforcement Learning (PPO) & Distillation
+Train an LLM to explore the network dynamically via trial and error. The agent receives penalties for invalid commands/noise, and a massive `+100` reward for reaching Domain Admin.
+
+If the agent gets stuck during an RL episode, you can configure a **Teacher** model (via an OpenAI-compatible API) to interject, providing the optimal reasoning and command. This acts as an automated Knowledge Distillation loop from a 70B+ model to your smaller 8B model!
+
+```bash
+openworlds train rl \
+    --model data/models/openworlds-agent \
+    --teacher-api-base https://api.openai.com/v1 \
+    --teacher-model gpt-4o \
+    --episodes 100 \
+    --cpu
+```
+
+### Swarm Multi-Agent Architecture
+Instead of relying on a single monolith model to understand the entire network state, OpenWorlds supports **Swarm Orchestration**. A high-level Coordinator model analyzes the AD graph and delegates narrow objectives (using `<delegate to="Recon">`) to narrow AI specialists like the `Recon Agent` or the `Exploit Agent`. 
+
+### Multi-Domain Forests & Cloud Extensions
+Simulations traverse disjoint Active Directory environments using `DomainTrust` models (both Trust Inbound and Outbound). Additionally, the engine simulates enterprise assets beyond Windows, including **Linux servers** (via the `ssh` tool handler) and **AWS/Azure clouds** (via the `aws` CLI handler for STS impersonation).
 
 ---
 

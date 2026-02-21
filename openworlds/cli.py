@@ -33,10 +33,13 @@ manifest_app = typer.Typer(help="Manage AD network manifests")
 trajectory_app = typer.Typer(help="Generate training trajectories")
 train_app = typer.Typer(help="Fine-tune models on trajectory data")
 eval_app = typer.Typer(help="Evaluate model performance")
+bas_app = typer.Typer(help="Run automated Breach and Attack Simulation playbooks")
+
 app.add_typer(manifest_app, name="manifest")
 app.add_typer(trajectory_app, name="trajectory")
 app.add_typer(train_app, name="train")
 app.add_typer(eval_app, name="eval")
+app.add_typer(bas_app, name="bas")
 
 console = Console()
 
@@ -414,6 +417,71 @@ def train_run(
             title="Model Response",
             border_style="cyan",
         ))
+
+@train_app.command("rl")
+def train_rl(
+    model: str = typer.Option(
+        "data/models/openworlds-agent", "--model", "-m",
+        help="Path to initial supervised-finetuned model",
+    ),
+    output: str = typer.Option(
+        "data/models/openworlds-agent-rl", "--output", "-o",
+        help="Path to save the RL-tuned model",
+    ),
+    lr: float = typer.Option(
+        1.41e-5, "--lr",
+        help="PPO Learning rate",
+    ),
+    batch_size: int = typer.Option(
+        1, "--batch-size", "-b",
+        help="PPO batch size per device",
+    ),
+    episodes: int = typer.Option(
+        100, "--episodes", "-e",
+        help="Number of RL episodes to run",
+    ),
+    max_steps: int = typer.Option(
+        15, "--max-steps",
+        help="Max simulation steps per episode",
+    ),
+    teacher_api: str = typer.Option(
+        None, "--teacher-api-base",
+        help="URL of Teacher Model API (for Knowledge Distillation fallback)",
+    ),
+    teacher_model: str = typer.Option(
+        "gpt-4o", "--teacher-model",
+        help="Model ID for Teacher API",
+    ),
+    cpu: bool = typer.Option(False, "--cpu", help="Force CPU inference"),
+) -> None:
+    """Run Reinforcement Learning (PPO) using the OpenWorlds Environment."""
+    from openworlds.train.rl_trainer import RLTrainer
+
+    console.print(Panel.fit(
+        f"[bold]Student Model:[/] {model}\n"
+        f"[bold]RL Episodes:[/] {episodes} | [bold]Max Steps:[/] {max_steps}\n"
+        f"[bold]Teacher Distillation:[/] {'✅ Active (' + teacher_model + ')' if teacher_api else '❌ Off'}\n"
+        f"[bold]Output:[/] {output}",
+        title="🧠 OpenWorlds RL Training (PPO)",
+        border_style="green",
+    ))
+
+    trainer = RLTrainer(
+        model_path=model,
+        output_dir=output,
+        learning_rate=lr,
+        batch_size=batch_size,
+        max_episodes=episodes,
+        max_steps_per_episode=max_steps,
+        device="cpu" if cpu else "auto",
+        teacher_api_base=teacher_api,
+        teacher_model=teacher_model,
+    )
+
+    with console.status("[bold green]Running RL episodes...[/]"):
+        trainer.train()
+
+    console.print(f"\n💾 RL Model saved to: [bold]{output}[/]")
 
 
 # ---------------------------------------------------------------------------
@@ -866,6 +934,71 @@ def eval_run(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(report.model_dump_json(indent=2))
     console.print(f"\n💾 Report saved to {output}")
+
+
+# ---------------------------------------------------------------------------
+# BAS commands
+# ---------------------------------------------------------------------------
+
+@bas_app.command("run")
+def bas_run(
+    script: Path = typer.Option(
+        ..., "--script", "-s", help="Path to YAML/JSON BAS playbook"
+    ),
+    manifest_path: Path = typer.Option(
+        ..., "--manifest", "-m", help="Path to the manifest JSON"
+    ),
+    output: Path = typer.Option(
+        Path("data/eval/bas_report.json"), "--output", "-o", help="Where to save the JSON report"
+    ),
+) -> None:
+    """Run an automated Breach and Attack Simulation playbook against the environment."""
+    from openworlds.eval.bas import BASEngine
+    from openworlds.world_engine.models import Manifest
+
+    if not script.exists():
+        console.print(f"[bold red]Error:[/bold red] Playbook not found: {script}")
+        raise typer.Exit(1)
+        
+    if not manifest_path.exists():
+        console.print(f"[bold red]Error:[/bold red] Manifest not found: {manifest_path}")
+        raise typer.Exit(1)
+
+    manifest_data = json.loads(manifest_path.read_text())
+    manifest = Manifest.model_validate(manifest_data)
+
+    console.print(Panel.fit(
+        f"[bold]Playbook:[/] {script}\n"
+        f"[bold]Network:[/] {manifest.domain.name}\n"
+        f"Dynamic Defense (Blue Team) is [bold red]ACTIVE[/]",
+        title="🛡️ OpenWorlds BAS Engine",
+        border_style="magenta",
+    ))
+
+    engine = BASEngine(manifest)
+    with console.status(f"[bold magenta]Running playbook '{script.name}'...[/bold magenta]"):
+        report = engine.run_script(script)
+
+    metrics_table = Table(title="📊 BAS Simulation Results")
+    metrics_table.add_column("Metric", style="bold")
+    metrics_table.add_column("Value", justify="right")
+    metrics_table.add_row("Script Name", report.script_name)
+    metrics_table.add_row("Steps Completed", f"{report.steps_completed} / {report.total_steps}")
+    metrics_table.add_row("Final Noise Level", str(report.final_noise_level))
+    
+    if not report.success:
+        metrics_table.add_row(
+            "[bold red]Blocked?[/bold red]", 
+            f"YES (at step {report.blocked_at_step})"
+        )
+    else:
+        metrics_table.add_row("[bold green]Blocked?[/bold green]", "NO (Undetected)")
+
+    console.print(metrics_table)
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(report.model_dump_json(indent=2))
+    console.print(f"\n💾 BAS Report saved to {output}")
 
 
 def run_cli() -> None:
