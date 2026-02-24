@@ -21,6 +21,9 @@ from openworlds.tools.handlers.secretsdump_handler import SecretsdumpHandler
 from openworlds.tools.handlers.smbclient_handler import SmbclientHandler
 from openworlds.tools.handlers.ssh import SSHHandler
 from openworlds.tools.handlers.aws import AWSHandler
+from openworlds.tools.handlers.curl_handler import CurlHandler
+from openworlds.tools.handlers.ffuf_handler import FFUFHandler
+from openworlds.tools.handlers.sqlmap_handler import SQLMapHandler
 from openworlds.world_engine.models import Manifest
 from openworlds.world_engine.blue_team import BlueTeamAgent
 
@@ -59,6 +62,11 @@ class ToolSimulator:
             "evil-winrm": EvilWinRMHandler(manifest),
             "ssh": SSHHandler(manifest),
             "aws": AWSHandler(manifest),
+            "curl": CurlHandler(manifest),
+            "ffuf": FFUFHandler(manifest),
+            "gobuster": FFUFHandler(manifest),
+            "dirb": FFUFHandler(manifest),
+            "sqlmap": SQLMapHandler(manifest),
         }
 
     def execute(self, command: str) -> str:

@@ -156,6 +156,84 @@ class Host(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Web Application Models
+# ---------------------------------------------------------------------------
+
+
+class WebVulnType(str, Enum):
+    """OWASP Top 10 vulnerability categories."""
+    SQLI = "sqli"
+    XSS = "xss"
+    SSRF = "ssrf"
+    LFI = "lfi"
+    RCE = "rce"
+    IDOR = "idor"
+    AUTH_BYPASS = "auth_bypass"
+    OPEN_REDIRECT = "open_redirect"
+
+
+class WebRoute(BaseModel):
+    """An HTTP endpoint in a simulated web application."""
+    path: str = Field(description="URL path, e.g. '/api/users'")
+    methods: list[str] = Field(default_factory=lambda: ["GET"])
+    parameters: list[str] = Field(
+        default_factory=list,
+        description="Query/body params, e.g. ['id', 'q']",
+    )
+    auth_required: bool = Field(default=False)
+    response_type: str = Field(default="html", description="'html' or 'json'")
+    description: str = Field(default="")
+    hidden: bool = Field(
+        default=False,
+        description="True = not linked from UI, discoverable only via fuzzing",
+    )
+
+
+class WebVulnerability(BaseModel):
+    """An exploitable vulnerability attached to a WebRoute."""
+    vuln_type: WebVulnType
+    route_path: str = Field(description="The WebRoute path this vuln lives on")
+    injection_point: str = Field(
+        description="Parameter that is injectable, e.g. 'id' or 'q'"
+    )
+    trigger_payload: str = Field(
+        description="Payload pattern that triggers exploitation, e.g. \"' OR 1=1--\""
+    )
+    exploited_response: str = Field(
+        description="Simulated output when exploit succeeds"
+    )
+    severity: str = Field(default="high")
+
+
+class WebApp(BaseModel):
+    """A web application running on a Host."""
+    name: str = Field(description="Application name, e.g. 'CorpPortal'")
+    base_url: str = Field(description="e.g. 'http://10.0.1.20:8080'")
+    framework: str = Field(
+        default="generic",
+        description="e.g. 'django', 'spring', 'express', 'php'",
+    )
+    tech_stack: list[str] = Field(
+        default_factory=list,
+        description="e.g. ['Python 3.11', 'PostgreSQL 15', 'nginx']",
+    )
+    routes: list[WebRoute] = Field(default_factory=list)
+    vulnerabilities: list[WebVulnerability] = Field(default_factory=list)
+    server_header: str = Field(
+        default="nginx/1.24.0",
+        description="Value of the Server HTTP header",
+    )
+    db_name: str = Field(
+        default="app_db",
+        description="Backend database name (for SQLi dumps)",
+    )
+    db_users_table: str = Field(
+        default="users",
+        description="Table name used in SQLi exploitation output",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Identity Models (Users, Groups, OUs)
 # ---------------------------------------------------------------------------
 
@@ -391,6 +469,9 @@ class Manifest(BaseModel):
 
     # Multi-Domain / Forest Relationships
     trusts: list[DomainTrust] = Field(default_factory=list)
+
+    # Web Applications (Phase 11)
+    web_apps: list[WebApp] = Field(default_factory=list)
 
     # Metadata
     generated_at: datetime = Field(default_factory=datetime.now)
